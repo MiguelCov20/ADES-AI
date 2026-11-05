@@ -17,9 +17,9 @@
 
 | Componente | Estado | Detalle |
 |---|---|---|
-| `docker-compose.yml` | ✅ Listo | Neo4j (GraphRAG) + Qdrant (vectorial) |
-| `agents/orquestador.py` | ⚠️ Parcial | LangGraph con 1 solo nodo (PM). Modelos desactualizados (`gemini-1.5-flash`) |
-| `.env` / `.env.example` | ⚠️ Keys expuestas | Hay que rotarlas (están en el repo) |
+| `docker-compose.yml` | ✅ Listo | Neo4j (GraphRAG) + Qdrant (vectorial) + Redis (cache); sin `version:` deprecada |
+| `agents/orquestador.py` | ✅ Funcional | LangGraph con 1 nodo (PM). Modelos actualizados (Gemini configurable vía `GEMINI_MODEL` + DeepSeek V4); nodo PM probado |
+| `.env` / `.env.example` | ✅ Rotado | Claves nuevas en `.env` (no versionado); `.gitignore` corregido |
 | `requirements.txt` | ✅ Listo | LangChain + LangGraph + clientes |
 | `mcp_servers/`, `memory/`, `environment/`, `skills/` | ❌ Vacías | Pendientes |
 | Ollama/vLLM local, agentes reales, skills, evals | ❌ No existe | Falta todo |
@@ -97,7 +97,7 @@ Capa 4 — Subagentes         → contexto aislado por tarea (bounded work)
 | **Routing ultra-barato** | **Claude Haiku 5.5 / GPT-6 Luna** ($0.10/M) | Gemini Flash | Clasificación, sumarios, extracción de hechos |
 | **Prompt caching** | **Gemini nativo + header `x-opencode-session`** | — | Contexto estático al inicio = hasta -90% en input |
 
-> Ya implementaste el `x-opencode-session` para cacheo ✅. Falta: reordenar prompts (estático primero) y actualizar nombres de modelo (`gemini-1.5-flash` → serie Gemini 2026).
+> Ya implementaste el `x-opencode-session` para cacheo ✅. Modelos actualizados: Gemini usa `GEMINI_MODEL` (configurable, por defecto `gemini-flash-latest`). Falta: reordenar prompts (estático primero).
 
 ### 3.3 Capa de Memoria (anti-alucinaciones) — MEJORADA
 
@@ -157,7 +157,7 @@ Las **Skills** (archivos `SKILL.md`) son capacidades reutilizables que se cargan
 
 | Rol | ⭐ Recomendado | Alternativa | Estado |
 |---|---|---|---|
-| **Instrucciones permanentes** | **AGENTS.md** (estándar cross-tool) | CLAUDE.md | ❌ Crear |
+| **Instrucciones permanentes** | **AGENTS.md** (estándar cross-tool) | CLAUDE.md | ✅ Creado |
 | **Framework de skills** | **Obra Superpowers** (247k ⭐) | Superpowers | ❌ Instalar |
 | **Skills propias** | `.opencode/skills/` | `.claude/skills/` | ❌ Crear |
 
@@ -293,12 +293,12 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 ## 5. Roadmap por fases (reestructurado)
 
-### FASE 0 — Cimientos y seguridad (estado: 40%)
+### FASE 0 — Cimientos y seguridad (estado: 100% ✅)
 - [x] Docker (Neo4j + Qdrant)
 - [x] LangGraph con nodo PM
-- [ ] **Rotar keys expuestas** en `.env` (GEMINI + OPENCODE) — urgente
-- [ ] Corregir `docker-compose.yml` (eliminar `version:` deprecada; añadir Redis)
-- [ ] Crear `AGENTS.md` raíz (corto, permanente)
+- [x] **Rotar keys expuestas** en `.env` (GEMINI + OPENCODE) — claves rotadas y actualizadas en `.env` (no versionado), `.gitignore` corregido y scanner de secretos (`environment/scan_secrets.py`)
+- [x] Corregir `docker-compose.yml` (eliminar `version:` deprecada; añadir Redis)
+- [x] Crear `AGENTS.md` raíz (corto, permanente)
 
 ### FASE 1 — Cerebro local (GPU)
 - [ ] Instalar **Ollama** + bajar gpt-oss:20b, Qwen3.8 27B (IQ3_S), Llama-3.2-3B, nomic-embed-text

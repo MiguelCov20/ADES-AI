@@ -12,12 +12,13 @@ if %errorlevel% neq 0 (
 )
 
 :: Levanta todos los servicios en segundo plano
-echo Levantando bases de datos de memoria (GraphRAG y Vectorial)...
-docker-compose up -d
+echo Levantando bases de datos de memoria (GraphRAG y Vectorial) y cache...
+docker compose up -d
 
 echo ========================================================
 echo Ecosistema iniciado correctamente.
 echo - Neo4j (GraphRAG) disponible en: http://localhost:7474
 echo - Qdrant (Vectorial) disponible en: http://localhost:6333
+echo - Redis (Cache semantico) disponible en: http://localhost:6379
 echo ========================================================
 pause

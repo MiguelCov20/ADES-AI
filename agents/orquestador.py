@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 from typing import TypedDict, Annotated, Sequence
 from dotenv import load_dotenv
@@ -10,6 +11,10 @@ import operator
 
 # Forzar la lectura de las variables de entorno
 load_dotenv()
+
+# Forzar UTF-8 en la consola de Windows (evita UnicodeEncodeError al imprimir planes con emojis)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # 1. Definir el Estado (La memoria compartida del flujo)
 class AgentState(TypedDict):
@@ -26,8 +31,10 @@ def get_pm_llm(opcion_modelo: str):
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("Falta GOOGLE_API_KEY en .env")
-        # Usamos flash por estabilidad (o "gemini-pro" si la red lo permite)
-        return ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2, google_api_key=api_key)
+        # Gemini 2026. Modelo configurable vía GEMINI_MODEL (por defecto "gemini-flash-latest").
+        # Alternativas: "gemini-4-argon" (razonamiento pesado) o "gemini-flash-lite-latest" (más ligero).
+        model = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+        return ChatGoogleGenerativeAI(model=model, temperature=0.2, google_api_key=api_key)
     
     elif opcion_modelo == "2":
         # OPENCODE GO

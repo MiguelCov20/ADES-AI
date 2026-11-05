@@ -1,12 +1,13 @@
-version: '3.8'
+# ADES-AI — Infraestructura de memoria y caché
+# Uso: docker compose up -d
 
 services:
-  # 1. Base de Datos de Grafos (Neo4j) - Para el GraphRAG (Relaciones entre código y lógica)
+  # 1. Base de Datos de Grafos (Neo4j) — GraphRAG (relaciones entre código y lógica)
   graph_memory:
     image: neo4j:5.23.0
     container_name: neo4j_graphrag
     environment:
-      - NEO4J_AUTH=neo4j/password_seguro_123
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-password_seguro_123}
     ports:
       - "7474:7474" # Interfaz web para visualizar el grafo
       - "7687:7687" # Puerto de conexión para tus agentes
@@ -14,7 +15,7 @@ services:
       - neo4j_data:/data
     restart: unless-stopped
 
-  # 2. Base de Datos Vectorial (Qdrant) - Para memoria semántica a largo plazo y ahorro de tokens
+  # 2. Base de Datos Vectorial (Qdrant) — memoria semántica a largo plazo y ahorro de tokens
   vector_memory:
     image: qdrant/qdrant:latest
     container_name: qdrant_memory
@@ -25,9 +26,21 @@ services:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
 
+  # 3. Caché semántico (Redis) — GPTCache y colas (Fase 7: optimización de tokens)
+  semantic_cache:
+    image: redis:7-alpine
+    container_name: redis_cache
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
   # (Espacio reservado para el contenedor de Agentes LangGraph)
   # (Espacio reservado para el servidor Ollama LLM Local con acceso a tu GPU de 16GB)
 
 volumes:
   neo4j_data:
   qdrant_data:
+  redis_data:

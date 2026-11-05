@@ -1,0 +1,6 @@
+#!/bin/sh
+# Pre-commit hook de ADES-AI: bloquea commits que contengan secretos.
+# Instalar:
+#   cp environment/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit   (en Windows/Git Bash: git update-index --chmod=+x ...)
+python "$(git rev-parse --show-toplevel)/environment/scan_secrets.py" || exit 1
