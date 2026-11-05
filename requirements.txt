@@ -1,0 +1,6 @@
+langgraph
+langchain-google-genai
+langchain-core
+python-dotenv
+neo4j
+qdrant-client
