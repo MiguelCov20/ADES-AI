@@ -18,7 +18,7 @@
 | Componente | Estado | Detalle |
 |---|---|---|
 | `docker-compose.yml` | ✅ Listo | Neo4j (GraphRAG) + Qdrant (vectorial) + Redis (cache); sin `version:` deprecada |
-| `agents/orquestador.py` | ✅ Funcional | LangGraph con 1 nodo (PM). Modelos actualizados (Gemini configurable vía `GEMINI_MODEL` + DeepSeek V4); nodo PM probado |
+| `agents/orquestador.py` | ✅ Completo | Grafo completo multiagente (PM → Arquitecto → Developer ⇄ QA → Reviewer → DevOps) con checkpoint; probado end-to-end |
 | `.env` / `.env.example` | ✅ Rotado | Claves nuevas en `.env` (no versionado); `.gitignore` corregido |
 | `requirements.txt` | ✅ Listo | LangChain + LangGraph + clientes |
 | `mcp_servers/`, `memory/`, `environment/`, `skills/` | ❌ Vacías | Pendientes |
@@ -317,13 +317,15 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Notas de Fase 2:** (1) `graphiti-core` 0.31.2 tiene un bug en la query bulk de Neo4j (`SET n:$(node.labels)`); se corrige con monkeypatch en `graphiti_client.py` y hay que llamar `build_indices_and_constraints()` antes de ingerir. (2) Mem0 v2 cambió `search()` a `filters={'user_id': ...}`. (3) Cognee 1.6.6 **no soporta Qdrant** (usa LanceDB/PGVector) y **requiere el plugin APOC** en Neo4j (añadido a `docker-compose.yml` con `NEO4J_PLUGINS=["apoc"]`); su LLM usa Ollama local para evitar el header de OpenCode Go.
 
-### FASE 3 — Fábrica multiagente (LangGraph)
-- [ ] Crear el **Agente Reclutador** (meta-agente: crea/modifica/elimina agentes)
-- [ ] Crear el **roster inicial de agentes** (Reclutador, PM, Arquitecto, Dev Back, Dev Front, QA, Reviewer, DevOps, Explorador)
-- [ ] Refactorizar `orquestador.py` → grafo completo (PM → Arquitecto → Developer ⇄ QA → Reviewer → DevOps)
-- [ ] **Router** (Llama-3.2-3B) para elegir modelo por tarea
-- [ ] Bucle cerrado Dev⇄QA con checkpoint
-- [ ] Actualizar nombres de modelo en código (Gemini 2026, deepseek-v4)
+### FASE 3 — Fábrica multiagente (LangGraph) (estado: 100% ✅)
+- [x] Crear el **Agente Reclutador** (meta-agente) — `agents/reclutador.py`
+- [x] Crear el **roster inicial de agentes** (9 agentes) — `agents/roster.json` + `agents/roster.py`
+- [x] Refactorizar `orquestador.py` → grafo completo — `agents/orquestador.py` + nodos `pm/arquitecto/developer/qa/reviewer.py`
+- [x] **Router** (Llama-3.2-3B) — `agents/router.py` (clasifica tarea → modelo, con fallback heurístico)
+- [x] Bucle cerrado Dev⇄QA con checkpoint — `add_conditional_edges` + `MemorySaver`
+- [x] Actualizar nombres de modelo (Gemini 2026, deepseek-v4) — sin nombres desactualizados; `GEMINI_MODEL` configurable
+
+> **Notas de Fase 3:** (1) La fábrica corre end-to-end con modelos reales: PM/Arquitecto→Gemini, Developer/QA→`gpt-oss:20b` (local), Reviewer→`deepseek-v4-pro`, DevOps→`deepseek-v4.1-flash`; Gemini es intermitente (503/429 transitorios de Google). (2) El Reclutador asigna LLM por rol (UX→qwen3.8, backend→gpt-oss:20b, revisor/arquitecto→deepseek-v4-pro, explorador→llama3.2:3b). (3) El router usa llama3.2:3b y cae a heurístico si el modelo local no responde.
 
 ### FASE 4 — Skills y subagentes (OpenCode)
 - [ ] Instalar **Obra Superpowers** + **oh-my-opencode**

@@ -1,0 +1,174 @@
+{
+  "version": "1.0",
+  "descripcion": "Registro de agentes de la fabrica ADES-AI (Fase 3). El Reclutador lo crea/modifica/elimina.",
+  "agents": [
+    {
+      "id": "reclutador",
+      "nombre": "Reclutador",
+      "rol": "meta-agente: crea, modifica y elimina a los demas agentes",
+      "llm": {
+        "provider": "opencode",
+        "model": "deepseek-v4-pro"
+      },
+      "skills": [],
+      "herramientas": [],
+      "permisos": [
+        "crear_agente",
+        "modificar_agente",
+        "eliminar_agente"
+      ]
+    },
+    {
+      "id": "pm",
+      "nombre": "Project Manager",
+      "rol": "requerimiento -> PRD + tickets",
+      "llm": {
+        "provider": "gemini",
+        "model": "auto"
+      },
+      "skills": [
+        "planificacion"
+      ],
+      "herramientas": [
+        "memoria"
+      ],
+      "permisos": [
+        "leer_memoria",
+        "crear_tickets"
+      ]
+    },
+    {
+      "id": "arquitecto",
+      "nombre": "Arquitecto",
+      "rol": "diseno de sistemas y stack",
+      "llm": {
+        "provider": "gemini",
+        "model": "auto"
+      },
+      "skills": [
+        "arquitectura"
+      ],
+      "herramientas": [
+        "memoria"
+      ],
+      "permisos": [
+        "leer_memoria"
+      ]
+    },
+    {
+      "id": "dev_backend",
+      "nombre": "Developer Backend",
+      "rol": "APIs y servicios (Python/FastAPI)",
+      "llm": {
+        "provider": "ollama",
+        "model": "gpt-oss:20b"
+      },
+      "skills": [
+        "codificacion"
+      ],
+      "herramientas": [
+        "filesystem",
+        "memoria"
+      ],
+      "permisos": [
+        "leer_escribir_codigo"
+      ]
+    },
+    {
+      "id": "dev_frontend",
+      "nombre": "Developer Frontend",
+      "rol": "UI (React/Next.js)",
+      "llm": {
+        "provider": "ollama",
+        "model": "qwen3.8:27b-iq3"
+      },
+      "skills": [
+        "codificacion",
+        "ui"
+      ],
+      "herramientas": [
+        "filesystem",
+        "memoria"
+      ],
+      "permisos": [
+        "leer_escribir_codigo"
+      ]
+    },
+    {
+      "id": "qa",
+      "nombre": "QA Tester",
+      "rol": "pruebas en sandbox Docker + feedback (bucle cerrado con Dev)",
+      "llm": {
+        "provider": "ollama",
+        "model": "gpt-oss:20b"
+      },
+      "skills": [
+        "testing"
+      ],
+      "herramientas": [
+        "sandbox",
+        "memoria"
+      ],
+      "permisos": [
+        "ejecutar_en_sandbox"
+      ]
+    },
+    {
+      "id": "reviewer",
+      "nombre": "Code Reviewer",
+      "rol": "revision de diffs (seguridad/calidad)",
+      "llm": {
+        "provider": "opencode",
+        "model": "deepseek-v4-pro"
+      },
+      "skills": [
+        "revision"
+      ],
+      "herramientas": [
+        "memoria"
+      ],
+      "permisos": [
+        "leer_memoria"
+      ]
+    },
+    {
+      "id": "devops",
+      "nombre": "DevOps",
+      "rol": "CI/CD, Docker, despliegue",
+      "llm": {
+        "provider": "opencode",
+        "model": "deepseek-v4.1-flash"
+      },
+      "skills": [
+        "devops"
+      ],
+      "herramientas": [
+        "docker",
+        "memoria"
+      ],
+      "permisos": [
+        "leer_memoria",
+        "desplegar"
+      ]
+    },
+    {
+      "id": "explorador",
+      "nombre": "Explorador",
+      "rol": "explorar codigo y documentacion",
+      "llm": {
+        "provider": "ollama",
+        "model": "llama3.2:3b"
+      },
+      "skills": [
+        "exploracion"
+      ],
+      "herramientas": [
+        "filesystem",
+        "memoria"
+      ],
+      "permisos": [
+        "leer_codigo"
+      ]
+    }
+  ]
+}
