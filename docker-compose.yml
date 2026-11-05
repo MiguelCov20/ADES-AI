@@ -8,6 +8,7 @@ services:
     container_name: neo4j_graphrag
     environment:
       - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-password_seguro_123}
+      - NEO4J_PLUGINS=["apoc"]
     ports:
       - "7474:7474" # Interfaz web para visualizar el grafo
       - "7687:7687" # Puerto de conexión para tus agentes

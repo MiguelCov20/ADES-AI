@@ -308,12 +308,14 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Nota de hardware (Fase 1):** la GPU real es una **AMD Radeon RX 9070 XT (16GB)**, no NVIDIA como asumía el plan. Ollama la usa vía **ROCm** (`compute=gfx1201`). El tag `IQ3_S` de Qwen3.8 no existe en el registro; se importa `Qwen3.8-27B-IQ3-MIX.gguf` local con `ollama create`. Para 16GB, acotar `num_ctx` (~8192) para que los modelos de 12-13GB quepan en VRAM.
 
-### FASE 2 — Memoria completa (el pilar anti-alucinación)
-- [ ] Levantar **Graphiti** (sobre Neo4j existente)
-- [ ] Integrar **Mem0** (hechos personales/preferencias)
-- [ ] Levantar **Cognee** + `cognee-mcp` (KG de documentos)
-- [ ] Implementar **indexador Tree-sitter → Graphiti/Neo4j** (`memory/indexer.py`)
-- [ ] Script para (re)indexar un repo bajo demanda
+### FASE 2 — Memoria completa (el pilar anti-alucinación) (estado: 100% ✅)
+- [x] Levantar **Graphiti** (sobre Neo4j existente) — `memory/graphiti_client.py` (con monkeypatch de bug de graphiti-core 0.31.2 para Neo4j 5.23)
+- [x] Integrar **Mem0** (hechos personales/preferencias) — `memory/mem0_client.py` (Qdrant + nomic-embed-text + OpenCode Go)
+- [x] Levantar **Cognee** + `cognee-mcp` (KG de documentos) — `memory/cognee_client.py` (Neo4j + APOC + Ollama local + LanceDB)
+- [x] Implementar **indexador Tree-sitter → Graphiti/Neo4j** (`memory/indexer.py`)
+- [x] Script para (re)indexar un repo bajo demanda — `python -m memory.indexer --repo <ruta> [--reset]`
+
+> **Notas de Fase 2:** (1) `graphiti-core` 0.31.2 tiene un bug en la query bulk de Neo4j (`SET n:$(node.labels)`); se corrige con monkeypatch en `graphiti_client.py` y hay que llamar `build_indices_and_constraints()` antes de ingerir. (2) Mem0 v2 cambió `search()` a `filters={'user_id': ...}`. (3) Cognee 1.6.6 **no soporta Qdrant** (usa LanceDB/PGVector) y **requiere el plugin APOC** en Neo4j (añadido a `docker-compose.yml` con `NEO4J_PLUGINS=["apoc"]`); su LLM usa Ollama local para evitar el header de OpenCode Go.
 
 ### FASE 3 — Fábrica multiagente (LangGraph)
 - [ ] Crear el **Agente Reclutador** (meta-agente: crea/modifica/elimina agentes)
