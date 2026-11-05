@@ -129,15 +129,27 @@ LangGraph gana por **ciclos** (Dev ⇄ QA hasta pasar), checkpoints, recuperaci�
 
 ### 3.5 Capa de Agentes (la "Software Factory" + enjambre)
 
-**Fábrica principal (LangGraph):**
-1. **PM** → Gemini. Requerimiento → PRD + tickets. *(✅ parcial, existe)*
-2. **Arquitecto** → Gemini. PRD → estructura, stack, RepoMap inicial.
-3. **Developer** (varias instancias) → gpt-oss:20b/Qwen3.8 local. Escribe código por ticket.
-4. **QA/Tester** → sandbox Docker + LAM. Lee errores, devuelve feedback. *Bucle cerrado con Developer.*
-5. **Code Reviewer** → deepseek-v4-pro. Revisa diffs (seguridad, calidad).
-6. **DevOps** → empaqueta, Dockerfile/CI, despliega.
+**Agente 0 — Reclutador (meta-agente, el primero en crearse):** crea, modifica y elimina a los demás agentes según lo que pidas (*"Crea un agente especializado en UX/UI"*). Para cada agente elige el **LLM óptimo** (nube OpenCode Go vs local), le asigna **skills**, **herramientas MCP**, **permisos** y **acceso a memoria**, y lo registra en `agents/roster.json` (el registro de agentes). Funciona igual que el Tool Registry, pero para agentes.
 
-**Enjambre de subagentes (OpenCode + oh-my-opencode):** cada tarea de la fábrica se delega a subagentes con contexto acotado (Explore para investigar código, Librarian para memoria, Oracle para planificar), evitando contaminar el contexto principal.
+**Roster inicial de agentes (primer arranque sólido):**
+
+| Agente | LLM asignado | Función |
+|---|---|---|
+| **Reclutador** | deepseek-v4-pro (nube) | meta-agente: crea/gestiona al resto |
+| **PM** | Gemini (nube) | requerimiento → PRD + tickets |
+| **Arquitecto** | Gemini (nube) | diseño de sistemas y stack |
+| **Dev Backend** | gpt-oss:20b (local) | APIs y servicios (Python/FastAPI) |
+| **Dev Frontend** | Qwen3.8 (local) | UI (React/Next.js) |
+| **QA/Tester** | local + nube | pruebas en sandbox Docker + LAM, feedback (bucle cerrado con Dev) |
+| **Code Reviewer** | deepseek-v4-pro (nube) | revisión de diffs (seguridad/calidad) |
+| **DevOps** | deepseek-v4.1-flash (nube) | CI/CD, Docker, despliegue |
+| **Explorador** | Llama-3.2-3B (local) | explorar código y documentación |
+
+**Flujo de la fábrica (LangGraph):** Reclutador → PM → Arquitecto → Developer ⇄ QA → Reviewer → DevOps.
+
+**Enjambre de subagentes (OpenCode + oh-my-opencode):** cada tarea se delega a subagentes con contexto acotado (Explore para investigar código, Librarian para memoria, Oracle para planificar), evitando contaminar el contexto principal.
+
+> **Nota:** el Reclutador puede crear agentes adicionales bajo demanda (UX/UI, datos, seguridad, etc.) y asignarles el modelo más barato que cumpla su tarea, respetando tu presupuesto de tokens.
 
 ### 3.6 Capa de Skills (NUEVA — la gran novedad 2026)
 
@@ -211,6 +223,43 @@ Registra cada llamada, costo en tokens, latencia y calidad. Sin esto, optimizar 
 | **Config global** | AGENTS.md (+ `.cursorignore`) | Reglas permanentes, se cachean |
 | **MCP seguro** | Bifrost gateway | Autenticación y scope por tool call |
 
+### 3.12 Capa de Registro de Herramientas Integrables (el "marketplace" del ecosistema)
+
+El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y decir *"integra X en el proyecto Y"* sin tener que buscar herramientas cada vez. Es un catálogo persistente de repos de GitHub (skills, MCPs, herramientas, plugins, modelos y apps) que los agentes pueden **integrar bajo demanda**, **activar/desactivar por proyecto**, y **hacer crecer recursivamente** (*"agrega tal repo a ADE-AI"*).
+
+**Cómo funciona:**
+1. **Catálogo** (`registry/catalog.json`): lista versionada de repos con metadatos (tipo, URL, descripción, método de instalación, estado, licencia).
+2. **Estado** (`registry/state.json`): qué herramientas están activas y en qué proyecto, con su commit/versión.
+3. **Integrador** (skill del agente): aplica la integración según el tipo de herramienta.
+4. **Toggle**: activar/desactivar sin desinstalar — solo cambia lo que se carga en contexto (ahorro de tokens).
+
+**Métodos de integración por tipo:**
+
+| Tipo | Acción del integrador |
+|---|---|
+| `skill` | copiar a `.opencode/skills/<id>/` |
+| `mcp` | añadir entrada a `mcp_servers/mcp_config.json` con `"enabled": true/false` |
+| `tool` / `cli` | instalar binario o añadir dependencia |
+| `plugin` | registrar en `opencode.json` → `plugins` |
+| `model` | `ollama pull <modelo>` |
+| `app` | añadir servicio a `docker-compose.yml` |
+
+**Comandos de voz (lo que le dices al agente):**
+- *"Integra `<herramienta>` en `<proyecto>`"* → busca en el catálogo y la integra
+- *"Activa / desactiva `<herramienta>`"* → alterna el estado sin desinstalar
+- *"Agrega `<url-de-github>` a ADE-AI"* → añade el repo al catálogo (recursivo)
+- *"¿Qué herramientas hay para `<tarea>`?"* → búsqueda en el catálogo
+- *"Lista herramientas integradas"* → estado actual
+
+**Repos piloto (los primeros del catálogo):**
+
+| ID | Repo | Tipo | Qué aporta |
+|---|---|---|---|
+| `ecc` | `affaan-m/ECC` (org `ECC-Tools`) | skill | Framework de skills/reglas/hooks/seguridad para agentes (274k ⭐) |
+| `llm-council` | `karpathy/llm-council` | app | Consejo multi-LLM: varios modelos se revisan entre sí (LLM-as-judge) |
+| `llmfit` | `AlexsJones/llmfit` | tool | Recomienda qué modelo corre en tu hardware (38k ⭐) |
+| `web-llm` | `mlc-ai/web-llm` | sdk | Inferencia de LLMs en el navegador (WebGPU) |
+
 ---
 
 ## 4. Stack recomendado — resumen ejecutivo
@@ -238,6 +287,7 @@ Registra cada llamada, costo en tokens, latencia y calidad. Sin esto, optimizar 
 | Editor | **Cline (VS Code)** + Aider + OpenHands |
 | Observabilidad | **Langfuse** (+ DeepEval/Ragas/Promptfoo) |
 | Evaluación | LLM-as-a-Judge |
+| Registro de herramientas | **Tool Registry** (`registry/catalog.json` + `state.json`) |
 
 ---
 
@@ -254,7 +304,7 @@ Registra cada llamada, costo en tokens, latencia y calidad. Sin esto, optimizar 
 - [ ] Instalar **Ollama** + bajar gpt-oss:20b, Qwen3.8 27B (IQ3_S), Llama-3.2-3B, nomic-embed-text
 - [ ] Script `environment/setup_ollama.ps1`
 - [ ] Probar coding a <30 tok/s; benchmark gpt-oss:20b vs Qwen3.8
-- [ ] (Opcional, Fase 6+) instalar **vLLM** para servir el modelo a muchos agentes
+- [ ] (Opcional, Fase 9+) instalar **vLLM** para servir el modelo a muchos agentes
 
 ### FASE 2 — Memoria completa (el pilar anti-alucinación)
 - [ ] Levantar **Graphiti** (sobre Neo4j existente)
@@ -264,6 +314,8 @@ Registra cada llamada, costo en tokens, latencia y calidad. Sin esto, optimizar 
 - [ ] Script para (re)indexar un repo bajo demanda
 
 ### FASE 3 — Fábrica multiagente (LangGraph)
+- [ ] Crear el **Agente Reclutador** (meta-agente: crea/modifica/elimina agentes)
+- [ ] Crear el **roster inicial de agentes** (Reclutador, PM, Arquitecto, Dev Back, Dev Front, QA, Reviewer, DevOps, Explorador)
 - [ ] Refactorizar `orquestador.py` → grafo completo (PM → Arquitecto → Developer ⇄ QA → Reviewer → DevOps)
 - [ ] **Router** (Llama-3.2-3B) para elegir modelo por tarea
 - [ ] Bucle cerrado Dev⇄QA con checkpoint
@@ -275,27 +327,34 @@ Registra cada llamada, costo en tokens, latencia y calidad. Sin esto, optimizar 
 - [ ] Configurar subagentes (Explore, Librarian, Oracle) con contexto acotado
 - [ ] Definir `AGENTS.md` anidados por carpeta (convenciones locales)
 
-### FASE 5 — MCP + gateway
+### FASE 5 — Registro de Herramientas Integrables (Tool Registry)
+- [ ] Crear `registry/catalog.json` (esquema de metadatos) + `registry/state.json`
+- [ ] Implementar el **integrador** (skill del agente) con los 6 métodos de integración
+- [ ] Registrar los **4 repos piloto**: `ecc`, `llm-council`, `llmfit`, `web-llm`
+- [ ] Implementar los comandos de voz (integrar / activar / desactivar / agregar / listar)
+- [ ] Probar el flujo recursivo: *"Agrega `<repo>` a ADE-AI"*
+
+### FASE 6 — MCP + gateway
 - [ ] Crear `mcp_servers/mcp_config.json`
 - [ ] Levantar MCP: filesystem, git, GitHub, memory, sequential-thinking, Firecrawl, cognee-mcp
 - [ ] Instalar **Bifrost** como gateway (auth + scope)
 - [ ] Conectar orquestador a MCP (Developer lee/escribe archivos reales)
 
-### FASE 6 — Optimización de tokens (objetivo 90%)
+### FASE 7 — Optimización de tokens (objetivo 90%)
 - [ ] **Prompt caching**: reordenar contexto (estático primero) en Gemini y OpenCode
 - [ ] **Semantic caching**: Redis + GPTCache para respuestas repetidas
 - [ ] **RepoMaps** en uso real (medir ahorro en Langfuse)
 - [ ] **LLMLingua-2 / SuperCompress** para compresión de RAG y prompts
 - [ ] **Model routing** fino: medir hit-rate del caché y costo/tarea
 
-### FASE 7 — Evaluación y observabilidad
+### FASE 8 — Evaluación y observabilidad
 - [ ] Levantar **Langfuse** (+ Redis/ClickHouse en docker-compose)
 - [ ] Suite **LLM-as-a-Judge** para cada agente
 - [ ] **Ragas/DeepEval** para calidad de RAG
 - [ ] **Promptfoo** para red-team/seguridad
 - [ ] Dashboard de costo en tokens por agente
 
-### FASE 8 — Escalado, autonomía y fine-tuning
+### FASE 9 — Escalado, autonomía y fine-tuning
 - [ ] Migrar local a **vLLM** si la fábrica exige concurrencia
 - [ ] Workflow **OpenHands**: issue de GitHub → PR automático
 - [ ] Fine-tuning de un SLM (Qwen 3B/8B) con tus patrones vía **Unsloth**
@@ -303,11 +362,72 @@ Registra cada llamada, costo en tokens, latencia y calidad. Sin esto, optimizar 
 
 ---
 
-## 6. Estructura de directorios objetivo
+## 6. Características avanzadas del ecosistema (Features)
+
+Las 33 features que amplían el plan. Cada una está etiquetada por prioridad (🔴 esencial · 🟡 alto valor · 🟢 opcional) y mapeada a la fase donde se implementa. *(10 🔴 esenciales · 15 🟡 alto valor · 8 🟢 opcionales)*
+
+### A. Autonomía — "Software Factory" avanzada
+1. 🔴 **Project Bootstrapper** — *"Crea un proyecto de X"* → PM + Arquitecto generan estructura, dependencias, CI y README en un comando. *(Fase 3)*
+2. 🔴 **Backlog auto-gestionado (ticket-driven)** — el PM mantiene un kanban persistente de tickets; los Developers trabajan solos en background hasta agotarlos. *(Fase 3)*
+3. 🟡 **Agente "Watchdog" 24/7** — corre en background, vigila el repo por cambios rotos y alerta sin que lo pidas. *(Fase 3)*
+4. 🟡 **Self-Healing pipeline** — si QA falla, reintenta con estrategia distinta (otro modelo, más contexto, otra librería) antes de rendirse. *(Fase 3)*
+5. 🟡 **Multi-proyecto simultáneo** — un workspace con N proyectos, cada uno con su memoria, agentes y estado. *(Transversal)*
+
+### B. Memoria permanente avanzada
+6. 🔴 **Memoria cross-proyecto** — lo aprendido en el proyecto A (ej: "prefieres FastAPI") se reutiliza automáticamente en B. *(Fase 2)*
+7. 🟡 **Consolidación nocturna (Reflection)** — proceso batch que resume el día, extrae lecciones y compacta la memoria. *(Fase 2)*
+8. 🟡 **"Vacuna" contra bugs** — cada bug resuelto se guarda como patrón para no repetirlo jamás. *(Fase 2)*
+9. 🟢 **Timeline de decisiones** — con Graphiti: *"¿por qué decidimos X en marzo?"* con historial temporal. *(Fase 2)*
+
+### C. Optimización de tokens
+10. 🔴 **Token Budget Governor** — tope de gasto por tarea/proyecto; el router se adapta (local → barato → pesado). *(Fase 7)*
+11. 🟡 **Cache Hit-Rate Dashboard** — métrica en vivo de cuánto estás ahorrando. *(Fase 7)*
+12. 🟢 **Prefetch contextual predictivo** — precarga el contexto probable antes de pedirlo. *(Fase 7)*
+
+### D. Tool Registry — extensiones
+13. 🟡 **Marketplace interno con ratings** — puntuar/etiquetar herramientas ya probadas. *(Fase 5)*
+14. 🟡 **Detector de conflictos** — avisa si dos herramientas compiten (ej: dos MCP filesystem). *(Fase 5)*
+15. 🟡 **Version pinning + rollback** — fijar commit/versión de cada herramienta y revertir si rompe. *(Fase 5)*
+16. 🔴 **Instalación en sandbox + escaneo de seguridad** — auditar el repo (estilo AgentShield/Oathe) antes de activarlo. *(Fase 5)*
+
+### E. Evaluación y calidad
+17. 🟡 **Benchmark harness local** — mide a los agentes contra tareas estándar (estilo SWE-bench). *(Fase 8)*
+18. 🔴 **LLM Council como juez por defecto** — el piloto `llm-council` integrado para decisiones difíciles y evaluación. *(Fase 8)*
+19. 🟡 **Regression detector** — detecta si un cambio de prompt/modelo empeora la calidad de salida. *(Fase 8)*
+
+### F. Multi-modelo / enrutamiento
+20. 🔴 **Brain Selector automático** — analiza la complejidad y elige modelo + reasoning effort (más fino que el router básico). *(Fase 3)*
+21. 🟡 **Fallback en cascada** — si un modelo falla, escala solo al siguiente (local → flash → pro). *(Fase 3)*
+22. 🟢 **A/B testing de modelos** — compara dos modelos en la misma tarea y reporta el ganador. *(Fase 8)*
+
+### G. Seguridad y gobernanza
+23. 🔴 **Secrets scanner continuo** — detecta keys expuestas antes del commit. *(Fase 0)*
+24. 🟢 **Auditoría anti-IA** — revisa vulnerabilidades inyectadas por otras IAs (reporte §7.4). *(Fase 9)*
+25. 🟢 **Modo "cuarentena"** — herramientas no verificadas solo corren aisladas hasta aprobación. *(Fase 5)*
+
+### H. Interfaz / UX
+26. 🟡 **CLI unificado `ade`** — un solo comando para todo: `ade start`, `ade integrate X`, `ade status`, `ade tokens`. *(Transversal)*
+27. 🟡 **Dashboard web de control** — panel para ver agentes, tokens, memoria y herramientas activas. *(Fase 8)*
+28. 🟢 **Control por voz** — extiende los comandos de voz del registry a todo el ecosistema. *(Transversal)*
+
+### I. Inferencia local
+29. 🟡 **GPU Memory Manager** — carga/descarga modelos según demanda para no quedarte sin VRAM. *(Fase 1)*
+30. 🟢 **vLLM multi-model serving** — sirve varios modelos según el tráfico. *(Fase 9)*
+
+### J. Automejora / recursividad
+31. 🔴 **Auto-skill Generator** — genera una `SKILL.md` automáticamente de las tareas que repites (inspirado en ECC). *(Fase 4)*
+32. 🟢 **Ecosistema automejorable** — los agentes proponen mejoras a sus propios prompts/skills y el sistema las evalúa antes de aplicarlas. *(Fase 9)*
+33. 🔴 **Agente Reclutador (meta-agente)** — crea, modifica y elimina agentes a pedido, eligiendo el LLM óptimo (nube vs local) y asignando skills, herramientas MCP y permisos. *(Fase 3)*
+
+---
+
+## 7. Estructura de directorios objetivo
 
 ```
 ADE-AI/
 ├── agents/                    # Fábrica LangGraph
+│   ├── reclutador.py          # Reclutador (meta-agente: crea/gestiona agentes)
+│   ├── roster.json            # Registro de agentes (modelo, skills, herramientas, permisos)
 │   ├── orquestador.py         # Grafo completo (PM → ... → DevOps)
 │   ├── pm.py                  # Project Manager (Gemini)
 │   ├── arquitecto.py          # Architect (Gemini)
@@ -334,17 +454,22 @@ ADE-AI/
 │   └── cases/
 ├── cache/
 │   └── semantic_cache.py      # Redis + GPTCache
+├── registry/                  # Tool Registry (herramientas integrables)
+│   ├── catalog.json           # Catálogo de repos (skills, MCP, tools, plugins, modelos, apps)
+│   ├── state.json             # Estado activo/inactivo por proyecto
+│   └── tools/                 # Herramientas clonadas (ej. llm-council, llmfit)
 ├── docs/
-│   └── plan_ecosistema_ia.md  # ESTE documento
+│   ├── plan_ecosistema_ia.md      # ESTE documento
+│   └── catalogo_herramientas.md   # Descripción y URLs de todas las herramientas
 ├── docker-compose.yml         # + Redis, + Graphiti, + Mem0, + Langfuse
 └── .env
 ```
 
 ---
 
-## 7. Criterios de éxito (KPIs)
+## 8. Criterios de éxito (KPIs)
 
-- **Ahorro de tokens:** ≥ 70% medible en Langfuse tras Fase 6; ≥ 90% en flujos repetitivos cacheados
+- **Ahorro de tokens:** ≥ 70% medible en Langfuse tras Fase 7; ≥ 90% en flujos repetitivos cacheados
 - **Costo local:** $0 por tareas de codificación iterativa
 - **Ciclo Dev⇄QA:** corrección de errores en bucle cerrado sin intervención humana
 - **Anti-alucinación:** agente no referencia clases inexistentes (validado contra Graphiti/Neo4j)
@@ -352,7 +477,7 @@ ADE-AI/
 
 ---
 
-## 8. Cómo usar este archivo en futuras conversaciones
+## 9. Cómo usar este archivo en futuras conversaciones
 
 1. **Al iniciar una sesión nueva:** *"Lee `docs/plan_ecosistema_ia.md` y continuemos con la Fase X"*
 2. **Retomar a medias:** *"Estoy en la Fase 2, quiero implementar el indexador Tree-sitter"*
@@ -368,9 +493,9 @@ ADE-AI/
 
 ---
 
-## 9. Fuentes clave de la investigación (para verificación futura)
+## 10. Fuentes clave de la investigación (para verificación futura)
 
-- **Agentes de código:** OpenCode (`sst/opencode`), Cline, Aider, RooCode, Qwen Code, Kilo Code; Claude Code/Codex (propietarios)
+- **Agentes de código:** OpenCode (`anomalyco/opencode`), Cline, Aider, RooCode, Qwen Code, Kilo Code; Claude Code/Codex (propietarios)
 - **Skills:** Obra `obra/superpowers` (247k ⭐), `oh-my-opencode`, estándar `SKILL.md` + `AGENTS.md`
 - **Memoria:** `getzep/graphiti`, `mem0ai/mem0`, `topoteretes/cognee`, `HKUDS/LightRAG`, `microsoft/graphrag`
 - **Token optimization:** `pleasedodisturb/awesome-llm-token-optimization`, `microsoft/LLMLingua`, `zilliztech/GPTCache`, SuperCompress
@@ -378,5 +503,17 @@ ADE-AI/
 - **Inferencia local:** Ollama, vLLM, llama.cpp, gpt-oss:20b, Qwen3.8, Gemma 4
 - **MCP:** `modelcontextprotocol/servers`, Bifrost (Maxim AI), Firecrawl MCP, cognee-mcp
 - **Eval:** Langfuse, DeepEval, Ragas, Promptfoo, Braintrust, MLflow
+
+---
+
+## 11. Catálogo de herramientas externas
+
+Todas las herramientas, frameworks, modelos y servicios mencionados en este plan están descritos (con descripción sencilla y enlace oficial verificado) en el documento complementario:
+
+📄 **`docs/catalogo_herramientas.md`**
+
+Consúltalo cada vez que necesites la URL o una explicación rápida de una herramienta durante la implementación de una fase.
+
+---
 
 *Fin del plan. Mantén este documento actualizado como registro vivo del ecosistema.*

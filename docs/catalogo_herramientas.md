@@ -264,4 +264,29 @@ Empaqueta cada servicio (bases de datos, memoria, agentes) en contenedores aisla
 
 ---
 
+## 13. Registro de Herramientas Integrables — Repos Piloto
+
+Repos que el **Tool Registry** integra bajo demanda (activables/desactivables por proyecto). Son los primeros del catálogo.
+
+### ECC (Everything Claude Code) — skill ⭐
+Framework de "operación" para agentes de código: skills, reglas, hooks, memoria y seguridad. Analiza tu repo y genera prácticas de trabajo reutilizables para que el agente trabaje de forma disciplinada.
+- 🔗 **GitHub (organización):** https://github.com/ECC-Tools
+- 🔗 **Repositorio:** https://github.com/affaan-m/ECC
+
+### LLM Council — app
+Consejo de varios LLMs: envía tu pregunta a múltiples modelos, se revisan entre sí de forma anónima, y un "presidente" produce la respuesta final. Ideal para decisiones difíciles y evaluación de respuestas.
+- 🔗 **GitHub:** https://github.com/karpathy/llm-council
+
+### llmfit — tool
+Detecta tu hardware (CPU, RAM, GPU, VRAM) y recomienda qué modelos locales puedes correr y con qué cuantización. Perfecto para elegir el modelo correcto en tu GPU de 16GB.
+- 🔗 **GitHub:** https://github.com/AlexsJones/llmfit
+- 🔗 **Sitio:** https://www.llmfit.org
+
+### WebLLM — sdk
+Motor de inferencia que ejecuta LLMs directamente en el navegador usando WebGPU. Para construir aplicaciones web con IA 100% local (privada y sin servidor).
+- 🔗 **GitHub:** https://github.com/mlc-ai/web-llm
+- 🔗 **Docs:** https://webllm.mlc.ai/docs
+
+---
+
 *Fin del catálogo. Los elementos marcados con ⭐ son la opción recomendada (la "decisión final") en su categoría. Las marcadas como "alternativa" son opciones secundarias si la principal no se ajusta a una necesidad concreta.*
