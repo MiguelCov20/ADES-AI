@@ -1,10 +1,10 @@
-# ADE-AI (Autonomous Development Ecosystem with Artificial Intelligence)
+# ADES-AI (Autonomous Development Ecosystem with Artificial Intelligence)
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![Architecture](https://img.shields.io/badge/architecture-Hybrid%20(Local%20%2B%20Cloud)-success.svg)
 ![Status](https://img.shields.io/badge/status-Active%20Development-orange.svg)
 
-**ADE-AI** es un ecosistema de desarrollo de software autónomo y multi-agente. Diseñado para maximizar la eficiencia cognitiva y minimizar el consumo de recursos, ADE-AI combina la potencia de razonamiento de modelos en la nube con la ejecución rápida y privada de modelos locales, logrando un ahorro del 70% al 80% en el consumo de tokens.
+**ADES-AI** es un ecosistema de desarrollo de software autónomo y multi-agente. Diseñado para maximizar la eficiencia cognitiva y minimizar el consumo de recursos, ADE-AI combina la potencia de razonamiento de modelos en la nube con la ejecución rápida y privada de modelos locales, logrando un ahorro del 70% al 80% en el consumo de tokens.
 
 ## 🚀 Características Principales
 

@@ -1,7 +1,7 @@
-# PLAN DE TRABAJO: Ecosistema Completo de IA para Programación (ADE-AI v2.0)
+# PLAN DE TRABAJO: Ecosistema Completo de IA para Programación (ADES-AI v2.0)
 
 > **Estado:** Plan actualizado tras investigación exhaustiva · **Fecha:** 4 de Noviembre de 2026
-> **Proyecto:** ADE-AI (Autonomous Development Ecosystem with Artificial Intelligence)
+> **Proyecto:** ADES-AI (Autonomous Development Ecosystem with Artificial Intelligence)
 > **Este documento es la fuente de verdad del proyecto.** Léelo al inicio de cualquier sesión para retomar el contexto sin repetirlo.
 
 ---
@@ -225,7 +225,7 @@ Registra cada llamada, costo en tokens, latencia y calidad. Sin esto, optimizar 
 
 ### 3.12 Capa de Registro de Herramientas Integrables (el "marketplace" del ecosistema)
 
-El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y decir *"integra X en el proyecto Y"* sin tener que buscar herramientas cada vez. Es un catálogo persistente de repos de GitHub (skills, MCPs, herramientas, plugins, modelos y apps) que los agentes pueden **integrar bajo demanda**, **activar/desactivar por proyecto**, y **hacer crecer recursivamente** (*"agrega tal repo a ADE-AI"*).
+El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y decir *"integra X en el proyecto Y"* sin tener que buscar herramientas cada vez. Es un catálogo persistente de repos de GitHub (skills, MCPs, herramientas, plugins, modelos y apps) que los agentes pueden **integrar bajo demanda**, **activar/desactivar por proyecto**, y **hacer crecer recursivamente** (*"agrega tal repo a ADES-AI"*).
 
 **Cómo funciona:**
 1. **Catálogo** (`registry/catalog.json`): lista versionada de repos con metadatos (tipo, URL, descripción, método de instalación, estado, licencia).
@@ -247,7 +247,7 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 **Comandos de voz (lo que le dices al agente):**
 - *"Integra `<herramienta>` en `<proyecto>`"* → busca en el catálogo y la integra
 - *"Activa / desactiva `<herramienta>`"* → alterna el estado sin desinstalar
-- *"Agrega `<url-de-github>` a ADE-AI"* → añade el repo al catálogo (recursivo)
+- *"Agrega `<url-de-github>` a ADES-AI"* → añade el repo al catálogo (recursivo)
 - *"¿Qué herramientas hay para `<tarea>`?"* → búsqueda en el catálogo
 - *"Lista herramientas integradas"* → estado actual
 
@@ -332,7 +332,7 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 - [ ] Implementar el **integrador** (skill del agente) con los 6 métodos de integración
 - [ ] Registrar los **4 repos piloto**: `ecc`, `llm-council`, `llmfit`, `web-llm`
 - [ ] Implementar los comandos de voz (integrar / activar / desactivar / agregar / listar)
-- [ ] Probar el flujo recursivo: *"Agrega `<repo>` a ADE-AI"*
+- [ ] Probar el flujo recursivo: *"Agrega `<repo>` a ADES-AI"*
 
 ### FASE 6 — MCP + gateway
 - [ ] Crear `mcp_servers/mcp_config.json`
@@ -406,7 +406,7 @@ Las 33 features que amplían el plan. Cada una está etiquetada por prioridad (�
 25. 🟢 **Modo "cuarentena"** — herramientas no verificadas solo corren aisladas hasta aprobación. *(Fase 5)*
 
 ### H. Interfaz / UX
-26. 🟡 **CLI unificado `ade`** — un solo comando para todo: `ade start`, `ade integrate X`, `ade status`, `ade tokens`. *(Transversal)*
+26. 🟡 **CLI unificado `ades`** — un solo comando para todo: `ades start`, `ades integrate X`, `ades status`, `ades tokens`. *(Transversal)*
 27. 🟡 **Dashboard web de control** — panel para ver agentes, tokens, memoria y herramientas activas. *(Fase 8)*
 28. 🟢 **Control por voz** — extiende los comandos de voz del registry a todo el ecosistema. *(Transversal)*
 
@@ -424,7 +424,7 @@ Las 33 features que amplían el plan. Cada una está etiquetada por prioridad (�
 ## 7. Estructura de directorios objetivo
 
 ```
-ADE-AI/
+ADES-AI/
 ├── agents/                    # Fábrica LangGraph
 │   ├── reclutador.py          # Reclutador (meta-agente: crea/gestiona agentes)
 │   ├── roster.json            # Registro de agentes (modelo, skills, herramientas, permisos)

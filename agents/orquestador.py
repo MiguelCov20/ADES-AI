@@ -57,7 +57,7 @@ def project_manager_node(state: AgentState):
     requerimiento = state.get("requerimiento_usuario", "")
     
     system_prompt = SystemMessage(
-        content="""Eres el Project Manager de ADE-AI, una Software Factory autónoma.
+        content="""Eres el Project Manager de ADES-AI, una Software Factory autónoma.
         Tu trabajo NO es escribir código, sino planificar arquitecturas de software eficientes.
         Recibirás un requerimiento del usuario. Debes:
         1. Analizar el requerimiento.
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     app = build_graph()
     
     print("\n==================================================")
-    print("      ADE-AI: SOFTWARE FACTORY INICIALIZADA       ")
+    print("      ADES-AI: SOFTWARE FACTORY INICIALIZADA       ")
     print("==================================================")
     print("Selecciona el cerebro para el Project Manager (Nube):")
     print("1) Gemini (Recomendado para integraciones Google)")

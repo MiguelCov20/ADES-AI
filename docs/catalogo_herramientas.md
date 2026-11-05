@@ -1,6 +1,6 @@
-# Catálogo de Herramientas Externas — ADE-AI
+# Catálogo de Herramientas Externas — ADES-AI
 
-> **Proyecto:** ADE-AI (Ecosistema de Desarrollo con Inteligencia Artificial)
+> **Proyecto:** ADES-AI (Ecosistema de Desarrollo con Inteligencia Artificial)
 > **Fecha:** 5 de Noviembre de 2026
 > **Propósito:** Lista completa y verificada de todas las herramientas, frameworks, modelos y servicios externos que usará el ecosistema, con una descripción sencilla y su enlace oficial.
 
