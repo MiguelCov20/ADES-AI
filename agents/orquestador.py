@@ -1,4 +1,5 @@
 import os
+import uuid
 from typing import TypedDict, Annotated, Sequence
 from dotenv import load_dotenv
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
@@ -33,12 +34,17 @@ def get_pm_llm(opcion_modelo: str):
         api_key = os.getenv("OPENCODE_API_KEY")
         if not api_key:
             raise ValueError("Falta OPENCODE_API_KEY en .env")
-        # OpenCode Go usa el estándar OpenAI. Asignamos el modelo de arquitectura.
+        # OpenCode Go expone un endpoint compatible con OpenAI (chat/completions).
+        # Requiere el header `x-opencode-session` para enrutar y cachear correctamente.
         return ChatOpenAI(
-            model="deepseek-v4.1-flash", # El mejor modelo para PM de OpenCode en 2026
+            model="deepseek-v4.1-flash",
             temperature=0.2,
             api_key=api_key,
-            base_url="https://opencode.ai/inference/go/openai/v1" # Ajusta a la URL real de OpenCode Go si es distinta
+            base_url="https://opencode.ai/inference/go/openai/v1",
+            default_headers={
+                "x-opencode-session": f"ade-ai-pm-{uuid.uuid4().hex}",
+                "User-Agent": "ade-ai/1.0",
+            },
         )
     else:
         raise ValueError("Opción no válida.")
