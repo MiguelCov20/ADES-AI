@@ -327,11 +327,13 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Notas de Fase 3:** (1) La fábrica corre end-to-end con modelos reales: PM/Arquitecto→Gemini, Developer/QA→`gpt-oss:20b` (local), Reviewer→`deepseek-v4-pro`, DevOps→`deepseek-v4.1-flash`; Gemini es intermitente (503/429 transitorios de Google). (2) El Reclutador asigna LLM por rol (UX→qwen3.8, backend→gpt-oss:20b, revisor/arquitecto→deepseek-v4-pro, explorador→llama3.2:3b). (3) El router usa llama3.2:3b y cae a heurístico si el modelo local no responde.
 
-### FASE 4 — Skills y subagentes (OpenCode)
-- [ ] Instalar **Obra Superpowers** + **oh-my-opencode**
-- [ ] Crear skills propias en `.opencode/skills/`
-- [ ] Configurar subagentes (Explore, Librarian, Oracle) con contexto acotado
-- [ ] Definir `AGENTS.md` anidados por carpeta (convenciones locales)
+### FASE 4 — Skills y subagentes (OpenCode) (estado: 100% ✅)
+- [x] Instalar **Obra Superpowers** (plugin) + **oh-my-opencode** (skills) — clonados en `.opencode/vendor/` (gitignored) y referenciados en `opencode.json`
+- [x] Crear skills propias en `.opencode/skills/` — `indexar-repo`, `memoria`, `benchmark-local`, `fabrica`
+- [x] Configurar subagentes (Explore, Librarian, Oracle) con contexto acotado — `.opencode/agents/{explore,librarian,oracle}.md`
+- [x] Definir `AGENTS.md` anidados por carpeta — `agents/`, `memory/`, `environment/`
+
+> **Notas de Fase 4:** (1) Obra Superpowers se instala como **plugin** (`plugins` en `opencode.json`), no como skills; se clonó a `.opencode/vendor/superpowers` (v7.0.2) y se referencia localmente. (2) oh-my-opencode (OmO) es un CLI standalone; se integraron sus skills compatibles con OpenCode (`github-triage`, `pre-publish-review`, `work-with-pr`) vía el array `skills`. (3) Las skills propias y las de oh-my-opencode ya son descubiertas por OpenCode en runtime.
 
 ### FASE 5 — Registro de Herramientas Integrables (Tool Registry)
 - [ ] Crear `registry/catalog.json` (esquema de metadatos) + `registry/state.json`

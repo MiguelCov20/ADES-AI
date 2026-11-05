@@ -16,3 +16,6 @@ venv/
 # OS / editor
 Thumbs.db
 .DS_Store
+
+# Dependencias vendor (herramientas clonadas: Obra Superpowers, oh-my-opencode)
+.opencode/vendor/
