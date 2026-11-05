@@ -300,11 +300,13 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 - [x] Corregir `docker-compose.yml` (eliminar `version:` deprecada; añadir Redis)
 - [x] Crear `AGENTS.md` raíz (corto, permanente)
 
-### FASE 1 — Cerebro local (GPU)
-- [ ] Instalar **Ollama** + bajar gpt-oss:20b, Qwen3.8 27B (IQ3_S), Llama-3.2-3B, nomic-embed-text
-- [ ] Script `environment/setup_ollama.ps1`
-- [ ] Probar coding a <30 tok/s; benchmark gpt-oss:20b vs Qwen3.8
-- [ ] (Opcional, Fase 9+) instalar **vLLM** para servir el modelo a muchos agentes
+### FASE 1 — Cerebro local (GPU) (estado: 100% ✅ — vLLM se difiere a Fase 9)
+- [x] Instalar **Ollama** + modelos: `gpt-oss:20b` (13GB), `qwen3.8:27b-iq3` (GGUF local IQ3-MIX, 12GB), `llama3.2:3b` (2GB), `nomic-embed-text` (274MB)
+- [x] Script `environment/setup_ollama.ps1` (+ `environment/benchmark_local.py`)
+- [x] Benchmark gpt-oss:20b vs Qwen3.8: **gpt-oss 93.8 tok/s** vs qwen3.8 26.5 tok/s (con thinking). Ambos 100% GPU vía ROCm
+- [ ] (Opcional, Fase 9+) instalar **vLLM** para servir el modelo a muchos agentes — se difiere
+
+> **Nota de hardware (Fase 1):** la GPU real es una **AMD Radeon RX 9070 XT (16GB)**, no NVIDIA como asumía el plan. Ollama la usa vía **ROCm** (`compute=gfx1201`). El tag `IQ3_S` de Qwen3.8 no existe en el registro; se importa `Qwen3.8-27B-IQ3-MIX.gguf` local con `ollama create`. Para 16GB, acotar `num_ctx` (~8192) para que los modelos de 12-13GB quepan en VRAM.
 
 ### FASE 2 — Memoria completa (el pilar anti-alucinación)
 - [ ] Levantar **Graphiti** (sobre Neo4j existente)
