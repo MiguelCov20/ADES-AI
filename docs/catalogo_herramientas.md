@@ -159,6 +159,19 @@ Modelo para convertir texto en vectores (embeddings), usado en la búsqueda sem�
 Alternativa multilingüe para embeddings.
 - 🔗 **GitHub:** https://github.com/FlagOpen/FlagEmbedding
 
+### Modelos Cloud (nube, vía API)
+
+### Gemini (Google) ⭐
+Familia de modelos de Google para razonamiento y arquitectura (serie Gemini 4 / Flash). Se usa para el PM y el Arquitecto de la fábrica. Configurable con `GEMINI_MODEL`.
+- 🔗 **Sitio:** https://ai.google.dev
+
+### DeepSeek V4 (OpenCode Go) ⭐
+Modelos DeepSeek servidos a través del endpoint OpenAI-compatible de OpenCode Go (`deepseek-v4.1-flash`, `deepseek-v4-pro`). Se usan para código complejo, review y el Reclutador.
+- 🔗 **OpenCode:** https://opencode.ai
+
+### Claude Haiku 5.5 / GPT-6 Luna (routing barato)
+Modelos de nube muy baratos (~$0.10/M) para clasificación, sumarios y extracción de hechos.
+
 ---
 
 ## 7. MCP (Model Context Protocol) — las "manos" del agente

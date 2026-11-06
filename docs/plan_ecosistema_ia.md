@@ -1,6 +1,6 @@
 # PLAN DE TRABAJO: Ecosistema Completo de IA para Programación (ADES-AI v2.0)
 
-> **Estado:** Plan actualizado tras investigación exhaustiva · **Fecha:** 4 de Noviembre de 2026
+> **Estado:** **v1.0 implementado** — Fases 0-10 completadas y testeadas · **Fecha:** 4 de Noviembre de 2026
 > **Proyecto:** ADES-AI (Autonomous Development Ecosystem with Artificial Intelligence)
 > **Este documento es la fuente de verdad del proyecto.** Léelo al inicio de cualquier sesión para retomar el contexto sin repetirlo.
 
@@ -13,18 +13,21 @@
 - 🟢 **OpenCode Go** → endpoint OpenAI-compatible con modelos DeepSeek V4 (`deepseek-v4.1-flash`, `deepseek-v4-pro`)
 - 🟢 **GPU 16GB VRAM** → LLMs locales (sweet spot 2026: modelos ~20-27B cuantizados, o MoE con offload)
 
-**Estado actual del proyecto (diagnóstico):**
+**Estado actual del proyecto (v1.0 — diagnóstico final):**
 
 | Componente | Estado | Detalle |
 |---|---|---|
-| `docker-compose.yml` | ✅ Listo | Neo4j (GraphRAG) + Qdrant (vectorial) + Redis (cache); sin `version:` deprecada |
-| `agents/orquestador.py` | ✅ Completo | Grafo completo multiagente (PM → Arquitecto → Developer ⇄ QA → Reviewer → DevOps) con checkpoint; probado end-to-end |
+| `docker-compose.yml` | ✅ Listo | Neo4j (GraphRAG + APOC) + Qdrant + Redis + Bifrost (gateway) |
+| `agents/` | ✅ Completo | Fábrica multiagente LangGraph (PM → Arquitecto → Developer ⇄ QA → Reviewer → DevOps) + Reclutador + router |
+| `memory/` | ✅ Completo | Indexador Tree-sitter→Neo4j, Graphiti, Mem0, Cognee, RepoMap |
+| `mcp_servers/` | ✅ Completo | 7 servidores MCP (stdio + SSE) + cliente + gateway Bifrost |
+| `cache/` | ✅ Completo | Prompt caching, caché semántico (Redis), LLMLingua-2, métricas de tokens |
+| `registry/` | ✅ Completo | Tool Registry (catálogo + estado + integrador + comandos) |
+| `evals/` | ✅ Completo | LLM-as-a-Judge, RAG eval, tracing (Langfuse), dashboard de costo |
+| `.opencode/` | ✅ Completo | Skills propias + subagentes (Explore, Librarian, Oracle) |
 | `.env` / `.env.example` | ✅ Rotado | Claves nuevas en `.env` (no versionado); `.gitignore` corregido |
-| `requirements.txt` | ✅ Listo | LangChain + LangGraph + clientes |
-| `mcp_servers/`, `memory/`, `environment/`, `skills/` | ❌ Vacías | Pendientes |
-| Ollama/vLLM local, agentes reales, skills, evals | ❌ No existe | Falta todo |
 
-**Punto clave:** existe el esqueleto (memoria + 1 agente PM), pero el ecosistema real —cerebro local, fábrica multiagente, capa de skills, MCP, memoria de largo plazo, evaluación y la estrategia de ahorro del 90%— está por construir.
+**Punto clave:** el ecosistema completo está construido, testado y documentado (Fases 0-10 ✅). Queda pendiente únicamente la **Fase 11** (agentes en entorno simulado, v2.0).
 
 ---
 
@@ -97,7 +100,7 @@ Capa 4 — Subagentes         → contexto aislado por tarea (bounded work)
 | **Routing ultra-barato** | **Claude Haiku 5.5 / GPT-6 Luna** ($0.10/M) | Gemini Flash | Clasificación, sumarios, extracción de hechos |
 | **Prompt caching** | **Gemini nativo + header `x-opencode-session`** | — | Contexto estático al inicio = hasta -90% en input |
 
-> Ya implementaste el `x-opencode-session` para cacheo ✅. Modelos actualizados: Gemini usa `GEMINI_MODEL` (configurable, por defecto `gemini-flash-latest`). Falta: reordenar prompts (estático primero).
+> Ya implementaste el `x-opencode-session` para cacheo ✅. Modelos actualizados: Gemini usa `GEMINI_MODEL` (configurable, por defecto `gemini-flash-latest`). Prompt caching (estático primero) implementado en Fase 7 (`cache/prompt_cache.py`).
 
 ### 3.3 Capa de Memoria (anti-alucinaciones) — MEJORADA
 
@@ -105,12 +108,12 @@ La investigación revela que el RAG vectorial puro quedó atrás; 2026 combina *
 
 | Rol | ⭐ Recomendado | Alternativa | Estado |
 |---|---|---|---|
-| **Grafo de código (temporal)** | **Graphiti (Zep)** sobre Neo4j | LightRAG | ❌ Falta — imprescindible |
+| **Grafo de código (temporal)** | **Graphiti (Zep)** sobre Neo4j | LightRAG | ✅ (Fase 2) |
 | **Grafo/vectorial base** | **Neo4j 5.23** | Memgraph | ✅ Ya en Docker |
 | **Vectorial (semántica)** | **Qdrant** | Pinecone / Chroma | ✅ Ya en Docker |
-| **Hechos personales (largo plazo)** | **Mem0** | Zep / Letta | ❌ Falta |
-| **KG de documentos + MCP** | **Cognee** (Apache 2.0) | Microsoft GraphRAG | ❌ Falta |
-| **Indexador código → grafo** | **Tree-sitter** → Graphiti/Neo4j | Aider RepoMap | ❌ Falta |
+| **Hechos personales (largo plazo)** | **Mem0** | Zep / Letta | ✅ (Fase 2) |
+| **KG de documentos + MCP** | **Cognee** (Apache 2.0) | Microsoft GraphRAG | ✅ (Fase 2) |
+| **Indexador código → grafo** | **Tree-sitter** → Graphiti/Neo4j | Aider RepoMap | ✅ (Fase 2) |
 
 **Por qué esta combinación:**
 - **Graphiti** (Apache 2.0, sobre Neo4j): construye el grafo de tu código de forma **incremental y temporal** — sabe qué clases existen, sus relaciones, y cuándo cambiaron. Anti-alucinación estructural real.
@@ -122,8 +125,8 @@ La investigación revela que el RAG vectorial puro quedó atrás; 2026 combina *
 
 | Rol | ⭐ Recomendado | Alternativa | Estado |
 |---|---|---|---|
-| **Motor de grafos (fábrica)** | **LangGraph** | CrewAI / OpenAI Agents SDK / MetaGPT | ⚠️ Solo 1 nodo |
-| **Orquestación multiagente OpenCode** | **oh-my-opencode** | Obra Superpowers | ❌ Falta |
+| **Motor de grafos (fábrica)** | **LangGraph** | CrewAI / OpenAI Agents SDK / MetaGPT | ✅ Grafo completo (Fase 3) |
+| **Orquestación multiagente OpenCode** | **oh-my-opencode** | Obra Superpowers | ✅ (Fase 4) |
 
 LangGraph gana por **ciclos** (Dev ⇄ QA hasta pasar), checkpoints, recuperación y human-in-the-loop. `oh-my-opencode` orquesta flotas de agentes (Sisyphus, Oracle, Librarian, Explore, Atlas, Prometheus, Metis, Momus) con modo "ultrawork" y enrutamiento por categoría.
 
@@ -158,8 +161,8 @@ Las **Skills** (archivos `SKILL.md`) son capacidades reutilizables que se cargan
 | Rol | ⭐ Recomendado | Alternativa | Estado |
 |---|---|---|---|
 | **Instrucciones permanentes** | **AGENTS.md** (estándar cross-tool) | CLAUDE.md | ✅ Creado |
-| **Framework de skills** | **Obra Superpowers** (247k ⭐) | Superpowers | ❌ Instalar |
-| **Skills propias** | `.opencode/skills/` | `.claude/skills/` | ❌ Crear |
+| **Framework de skills** | **Obra Superpowers** (247k ⭐) | Superpowers | ✅ (Fase 4) |
+| **Skills propias** | `.opencode/skills/` | `.claude/skills/` | ✅ (Fase 4) |
 
 **Obra Superpowers** aporta un ciclo completo: `brainstorming` → `writing-plans` → TDD → `subagent-driven-development` → `systematic-debugging` → verificación. Incluye la "regla del 1%" (si hay 1% de probabilidad de que una skill aplique, úsala).
 
@@ -456,44 +459,53 @@ Las 33 features que amplían el plan. Cada una está etiquetada por prioridad (�
 
 ```
 ADES-AI/
-├── agents/                    # Fábrica LangGraph
-│   ├── reclutador.py          # Reclutador (meta-agente: crea/gestiona agentes)
-│   ├── roster.json            # Registro de agentes (modelo, skills, herramientas, permisos)
-│   ├── orquestador.py         # Grafo completo (PM → ... → DevOps)
-│   ├── pm.py                  # Project Manager (Gemini)
-│   ├── arquitecto.py          # Architect (Gemini)
-│   ├── developer.py           # Developer (gpt-oss:20b / Qwen3.8 local)
-│   ├── qa.py                  # QA sandbox (local + LAM)
-│   ├── reviewer.py            # Code Reviewer (DeepSeek V4)
-│   └── router.py              # Llama-3.2-3B selector
-├── memory/
-│   ├── indexer.py             # Tree-sitter → Graphiti/Neo4j
-│   ├── graphiti_client.py     # Grafo temporal
-│   ├── mem0_client.py         # Hechos personales
-│   └── schemas.py
-├── mcp_servers/
-│   ├── mcp_config.json        # Config MCP (OpenCode + Cline + LangGraph)
-│   └── gateway/               # Bifrost (auth + scope)
-├── skills/
-│   ├── AGENTS.md              # Instrucciones permanentes (raíz)
-│   └── .opencode/skills/      # Skills propias (SKILL.md)
-├── environment/
-│   ├── setup_ollama.ps1
-│   └── setup_vllm.sh
-├── evals/
+├── agents/                    # Fábrica LangGraph (Fase 3)
+│   ├── orquestador.py         # Grafo completo (PM → Arquitecto → Developer ⇄ QA → Reviewer → DevOps)
+│   ├── pm.py · arquitecto.py · developer.py · qa.py · reviewer.py
+│   ├── reclutador.py          # Reclutador (meta-agente)
+│   ├── router.py              # Router (Llama-3.2-3B selector)
+│   ├── llm.py                 # Fábrica de LLMs (gemini / opencode / ollama)
+│   ├── roster.py + roster.json # Registro de agentes
+│   └── AGENTS.md
+├── memory/                    # Memoria (Fase 2)
+│   ├── indexer.py · schemas.py   # Tree-sitter → Neo4j
+│   ├── graphiti_client.py        # Grafo temporal
+│   ├── mem0_client.py            # Hechos personales
+│   ├── cognee_client.py          # KG de documentos
+│   ├── repomap.py                # RepoMap (Fase 7)
+│   └── AGENTS.md
+├── mcp_servers/               # MCP + gateway (Fase 6)
+│   ├── mcp_config.json        # 7 servidores (stdio + SSE)
+│   ├── client.py              # Cliente MCP (stdio + sse_client)
+│   └── gateway/README.md      # Bifrost
+├── cache/                     # Optimización de tokens (Fase 7)
+│   ├── prompt_cache.py        # Prompt caching (estático primero)
+│   ├── semantic_cache.py      # Redis + embeddings
+│   ├── prompt_compressor.py   # LLMLingua-2
+│   └── token_metrics.py       # hit-rate + costo
+├── registry/                  # Tool Registry (Fase 5)
+│   ├── catalog.json · state.json
+│   ├── registry.py · integrator.py · cli.py
+├── evals/                     # Evaluación (Fase 8)
 │   ├── judge.py               # LLM-as-a-Judge
-│   └── cases/
-├── cache/
-│   └── semantic_cache.py      # Redis + GPTCache
-├── registry/                  # Tool Registry (herramientas integrables)
-│   ├── catalog.json           # Catálogo de repos (skills, MCP, tools, plugins, modelos, apps)
-│   ├── state.json             # Estado activo/inactivo por proyecto
-│   └── tools/                 # Herramientas clonadas (ej. llm-council, llmfit)
+│   ├── rag_eval.py · tracing.py · dashboard.py
+│   ├── promptfooconfig.yaml
+│   └── cases/casos.json
+├── environment/               # Scripts (Fases 0-9)
+│   ├── setup_ollama.ps1 · setup_fase4.ps1 · setup_vllm.sh
+│   ├── benchmark_local.py · scan_secrets.py · pre-commit
+│   ├── setup_openhands.md · finetune_unsloth.py
+│   └── AGENTS.md
+├── .opencode/                 # Skills y subagentes (Fase 4)
+│   ├── skills/ (indexar-repo, memoria, benchmark-local, fabrica)
+│   └── agents/ (explore, librarian, oracle)
 ├── docs/
 │   ├── plan_ecosistema_ia.md      # ESTE documento
-│   └── catalogo_herramientas.md   # Descripción y URLs de todas las herramientas
-├── docker-compose.yml         # + Redis, + Graphiti, + Mem0, + Langfuse
-└── .env
+│   └── catalogo_herramientas.md   # Descripción y URLs
+├── docker-compose.yml         # Neo4j + Qdrant + Redis + Bifrost
+├── docker-compose.langfuse.yml # Langfuse self-host
+├── opencode.json              # plugins + skills
+├── AGENTS.md · README.md · requirements.txt · .env
 ```
 
 ---
