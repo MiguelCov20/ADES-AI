@@ -350,7 +350,7 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 - [x] Instalar **Bifrost** como gateway (auth + scope) — servicio `gateway` en `docker-compose.yml` + `mcp_servers/gateway/README.md`
 - [x] Conectar orquestador a MCP (Developer lee/escribe archivos reales) — `mcp_servers/client.py`
 
-> **Notas de Fase 6:** (1) El cliente MCP (`mcp_servers/client.py`) usa el SDK oficial `mcp` y se probó contra el servidor `filesystem` real (npx): lista 14 herramientas y lee archivos del proyecto. (2) Bifrost se instaló como contenedor `maximhq/bifrost` (puerto 8080, Web UI en `http://localhost:8080`); provee auth/scope, failover y caché semántico. (3) Los secretos (GitHub/Firecrawl) se pasan con placeholders `${VAR}`; el cliente omite los no definidos. (4) `cognee-mcp` es un servidor **SSE** (no stdio): se arranca con `cognee-cli serve` (entry point instalado) y se expone en `http://127.0.0.1:8001/sse`; el cliente actual (stdio) cubre filesystem/git/github/memory/sequential-thinking/firecrawl, y cognee-mcp requeriría `sse_client`.
+> **Notas de Fase 6:** (1) El cliente MCP (`mcp_servers/client.py`) usa el SDK oficial `mcp` y se probó contra el servidor `filesystem` real (npx): lista 14 herramientas y lee archivos del proyecto. (2) Bifrost se instaló como contenedor `maximhq/bifrost` (puerto 8080, Web UI en `http://localhost:8080`); provee auth/scope, failover y caché semántico. (3) Los secretos (GitHub/Firecrawl) se pasan con placeholders `${VAR}`; el cliente omite los no definidos. (4) `cognee-mcp` es un servidor **SSE** (no stdio): se arranca con Docker (`cognee/cognee-mcp:main`, `TRANSPORT_MODE=sse`) y se expone en `http://127.0.0.1:8001/sse` (resuelto en Fase 10 con soporte `sse_client`).
 
 ### FASE 7 — Optimización de tokens (objetivo 90%) (estado: 100% ✅)
 - [x] **Prompt caching**: reordenar contexto (estático primero) — `cache/prompt_cache.py`
@@ -378,13 +378,13 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Notas de Fase 9:** (1) vLLM y Unsloth requieren **Linux + NVIDIA/CUDA**; en la máquina de desarrollo (Windows + AMD RX 9070 XT) se sigue usando Ollama vía ROCm, por lo que estos scripts son artefactos documentados para el entorno de despliegue/entrenamiento (nube o host CUDA). (2) OpenHands corre vía Docker y complementa a la fábrica LangGraph (issue externo → PR vs requerimiento interno).
 
-### FASE 10 — Completar integraciones y deuda técnica pendiente
-- [ ] Añadir soporte **SSE** al cliente MCP (`mcp_servers/client.py`): `sse_client` junto a `stdio_client`
-- [ ] Conectar **cognee-mcp** de punta a punta (`cognee-cli serve` → `http://127.0.0.1:8001/sse`)
-- [ ] Implementar el método `app` del integrador del Tool Registry (Fase 5, hoy no-op: no añade el servicio a `docker-compose.yml`)
-- [ ] Acotar `num_ctx` en los nodos de la fábrica (Fase 3) para evitar offload parcial a CPU de los modelos locales
+### FASE 10 — Completar integraciones y deuda técnica pendiente (estado: 100% ✅)
+- [x] Añadir soporte **SSE** al cliente MCP (`mcp_servers/client.py`): `sse_client` junto a `stdio_client`
+- [x] Conectar **cognee-mcp** de punta a punta — imagen Docker `cognee/cognee-mcp:main` (`TRANSPORT_MODE=sse`) → `http://127.0.0.1:8001/sse`; probado (6 herramientas)
+- [x] Implementar el método `app` del integrador del Tool Registry — añade el servicio a `docker-compose.yml`
+- [x] Acotar `num_ctx` en los nodos de la fábrica — `extra_body={"num_ctx": 8192}` (configurable vía `OLLAMA_NUM_CTX`)
 
-> **Notas de Fase 10 (deuda técnica detectada):** (1) `cognee-mcp` es un servidor **SSE** (no stdio), arrancado con `cognee-cli serve` en `http://127.0.0.1:8001/sse`; el cliente actual solo cubre stdio (filesystem, git, github, memory, sequential-thinking, firecrawl). (2) El método `app` del integrador (Fase 5) se dejó como no-op para no modificar `docker-compose.yml` automáticamente; requiere revisión manual. (3) Los modelos locales de Ollama cargan con la ventana completa de contexto (128K) por defecto → offload parcial a CPU; los nodos de la fábrica usan `ChatOpenAI` sin `num_ctx` (rendimiento, no correctitud).
+> **Notas de Fase 10 (resuelta):** (1) `cognee-mcp` es un servidor **SSE** (no stdio): se arranca con Docker (`cognee/cognee-mcp:main`, `TRANSPORT_MODE=sse`) en `http://127.0.0.1:8001/sse` — **NO** `cognee-cli serve`, que conecta a Cognee Cloud. (2) El método `app` inserta el servicio antes de `volumes:` preservando los comentarios (imagen `{id}:latest` placeholder). (3) `num_ctx` se acotó a 8192 vía `extra_body` en `agents/llm.py`.
 
 ### FASE 11 — Agentes en entorno simulado (v2.0)
 - [ ] Agentes en entorno simulado (Godot/Phaser) — movido desde Fase 9 (opcional)

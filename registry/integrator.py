@@ -130,9 +130,29 @@ def _add_mcp(tid: str, url: str) -> None:
 
 
 def _add_app_service(tid: str, url: str) -> None:
-    # No modificamos docker-compose automáticamente (requiere revisión manual);
-    # se documenta el comando para que un agente lo aplique con supervisión.
-    pass
+    """Añade un servicio al docker-compose.yml (integración tipo 'app').
+
+    Inserta un bloque de servicio antes de la sección `volumes:`, preservando
+    los comentarios existentes. La imagen queda como `{tid}:latest` (placeholder)
+    porque la imagen real del repo hay que confirmarla; se deja un TODO con la
+    URL para ajustarla.
+    """
+    text = COMPOSE_FILE.read_text(encoding="utf-8")
+    if f"\n  {tid}:\n" in text:
+        return  # ya existe
+
+    block = (
+        f"  # App integrada via Tool Registry: {tid}\n"
+        f"  {tid}:\n"
+        f"    image: {tid}:latest  # TODO: ajustar a la imagen real ({url})\n"
+        f"    container_name: {tid}_app\n"
+        f"    restart: unless-stopped\n"
+    )
+    if "volumes:" in text:
+        text = text.replace("volumes:", block + "\nvolumes:", 1)
+    else:
+        text = text.rstrip() + "\n\n" + block
+    COMPOSE_FILE.write_text(text, encoding="utf-8")
 
 
 def activate(tool_id: str) -> bool:

@@ -48,10 +48,15 @@ def get_llm(provider: str, model: str | None = None, temperature: float = 0.2):
 
     if provider == "ollama":
         m = "gpt-oss:20b" if model in (None, "auto") else model
+        # Acotar num_ctx para que el modelo + KV cache quepan en 16 GB de VRAM
+        # (Fase 10: sin esto, Ollama carga la ventana completa de 128K y hace
+        # offload parcial a CPU).
+        num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "8192"))
         return ChatOpenAI(
             model=m, temperature=temperature,
             api_key="ollama",
             base_url=OLLAMA_BASE,
+            extra_body={"num_ctx": num_ctx},
         )
 
     raise ValueError(f"Provider no soportado: {provider}")

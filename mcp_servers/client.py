@@ -1,9 +1,9 @@
-"""Cliente MCP para el backend LangGraph - ADES-AI, Fase 6.
+"""Cliente MCP para el backend LangGraph - ADES-AI, Fase 6/10.
 
 Conecta el orquestador (Developer, QA, etc.) a los servidores MCP definidos en
-`mcp_config.json` mediante el SDK oficial `mcp`. Permite listar herramientas y
-llamarlas (p. ej. `filesystem.read_file`, `filesystem.write_file`), con lo que
-el Developer puede leer/escribir archivos reales del proyecto.
+`mcp_config.json` mediante el SDK oficial `mcp`, soportando DOS transportes:
+  - stdio (filesystem, git, github, memory, sequential-thinking, firecrawl)
+  - sse   (cognee-mcp, arrancado con `cognee-cli serve` en :8001)
 
 Uso:
     from mcp_servers import client
@@ -14,9 +14,11 @@ import asyncio
 import json
 import os
 import re
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
+from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 
 CONFIG_PATH = Path(__file__).resolve().parent / "mcp_config.json"
@@ -55,8 +57,21 @@ def _params(name: str) -> StdioServerParameters:
     )
 
 
+@asynccontextmanager
+async def _connect(name: str):
+    """Abre una conexión al servidor MCP según su transporte (stdio o sse)."""
+    cfg = load_config()["mcpServers"][name]
+    transport = cfg.get("transport", "stdio")
+    if transport == "sse":
+        async with sse_client(cfg["url"]) as (read, write):
+            yield read, write
+    else:
+        async with stdio_client(_params(name)) as (read, write):
+            yield read, write
+
+
 async def _list_tools(name: str) -> list[str]:
-    async with stdio_client(_params(name)) as (read, write):
+    async with _connect(name) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.list_tools()
@@ -69,7 +84,7 @@ def list_tools(name: str) -> list[str]:
 
 
 async def _call_tool(name: str, tool: str, arguments: dict):
-    async with stdio_client(_params(name)) as (read, write):
+    async with _connect(name) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.call_tool(tool, arguments=arguments)
