@@ -1,0 +1,23 @@
+{
+  "descripcion": "Casos de evaluacion para la suite LLM-as-a-Judge (Fase 8)",
+  "cases": [
+    {
+      "id": "ping-endpoint",
+      "agente": "developer",
+      "question": "Escribe un endpoint /ping en FastAPI que devuelva 'pong'",
+      "criteria": ["usa FastAPI", "ruta correcta /ping", "devuelve 'pong'"]
+    },
+    {
+      "id": "fibonacci",
+      "agente": "developer",
+      "question": "Escribe una funcion fibonacci(n) con memoizacion en Python",
+      "criteria": ["usa memoizacion", "corrige fibonacci correctamente", "incluye caso base"]
+    },
+    {
+      "id": "prd-simple",
+      "agente": "pm",
+      "question": "Genera un PRD para un endpoint de login con JWT",
+      "criteria": ["desglosa en tickets", "menciona seguridad", "es accionable"]
+    }
+  ]
+}

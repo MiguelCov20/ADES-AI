@@ -22,3 +22,6 @@ redis==8.1.0
 # y transformers<5; llmlingua requiere transformers>=4.26.
 huggingface-hub<1.0,>=0.34
 transformers<5.0,>=4.26
+
+# Fase 8 - Evaluación y observabilidad (trazabilidad + juez)
+langfuse==5.2.0

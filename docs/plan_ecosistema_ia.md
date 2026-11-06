@@ -361,12 +361,14 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Notas de Fase 7:** (1) El caché semántico usa Redis + `nomic-embed-text` (coseno) con umbral 0.60; GPTCache quedó instalado como alternativa de producción. (2) El RepoMap se genera desde el grafo de código (Fase 2) y mide el ahorro real. (3) LLMLingua-2 requiere la flag `use_llmlingua2=True` (sin ella usa el code path de LLaMA y falla con BERT). (4) **Conflicto de dependencias resuelto**: `llmlingua` sube `huggingface-hub` a 2.x, incompatible con cognee/fastembed/litellm (`<2.0`); se fijó `huggingface-hub<1.0` + `transformers<5.0,>=4.26` en `requirements.txt`. (5) El umbral de similitud y los costos por modelo son aproximados/configurables.
 
-### FASE 8 — Evaluación y observabilidad
-- [ ] Levantar **Langfuse** (+ Redis/ClickHouse en docker-compose)
-- [ ] Suite **LLM-as-a-Judge** para cada agente
-- [ ] **Ragas/DeepEval** para calidad de RAG
-- [ ] **Promptfoo** para red-team/seguridad
-- [ ] Dashboard de costo en tokens por agente
+### FASE 8 — Evaluación y observabilidad (estado: 100% ✅)
+- [x] Levantar **Langfuse** — `docker-compose.langfuse.yml` (postgres + langfuse) + `evals/tracing.py` (SDK con fallback a JSONL)
+- [x] Suite **LLM-as-a-Judge** para cada agente — `evals/judge.py` + `evals/cases/casos.json`
+- [x] **Ragas/DeepEval** para calidad de RAG — `evals/rag_eval.py` (faithfulness / answer_relevance / context_relevance vía juez)
+- [x] **Promptfoo** para red-team/seguridad — `evals/promptfooconfig.yaml`
+- [x] Dashboard de costo en tokens por agente — `evals/dashboard.py` (sobre `cache/token_metrics.py`)
+
+> **Notas de Fase 8:** (1) Langfuse self-host usa un stack mínimo (postgres + langfuse); para escala se añaden ClickHouse/MinIO/Redis según la guía oficial. El tracing funciona con fallback a `evals/traces.jsonl` si no hay servidor Langfuse. (2) El juez usa DeepSeek V4 (OpenCode Go) y devuelve score 1-10 + verdict PASS/FAIL + rationale. (3) RAG eval es ligero (juez propio); **Ragas/DeepEval no se instalaron** para evitar conflictos de dependencias con cognee/fastembed/litellm (mismo motivo que en Fase 7). (4) Promptfoo corre con `npx promptfoo eval -c evals/promptfooconfig.yaml`.
 
 ### FASE 9 — Escalado, autonomía y fine-tuning
 - [ ] Migrar local a **vLLM** si la fábrica exige concurrencia
