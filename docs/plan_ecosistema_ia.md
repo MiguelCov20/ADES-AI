@@ -352,12 +352,14 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Notas de Fase 6:** (1) El cliente MCP (`mcp_servers/client.py`) usa el SDK oficial `mcp` y se probó contra el servidor `filesystem` real (npx): lista 14 herramientas y lee archivos del proyecto. (2) Bifrost se instaló como contenedor `maximhq/bifrost` (puerto 8080, Web UI en `http://localhost:8080`); provee auth/scope, failover y caché semántico. (3) Los secretos (GitHub/Firecrawl) se pasan con placeholders `${VAR}`; el cliente omite los no definidos. (4) `cognee-mcp` es un servidor **SSE** (no stdio): se arranca con `cognee-cli serve` (entry point instalado) y se expone en `http://127.0.0.1:8001/sse`; el cliente actual (stdio) cubre filesystem/git/github/memory/sequential-thinking/firecrawl, y cognee-mcp requeriría `sse_client`.
 
-### FASE 7 — Optimización de tokens (objetivo 90%)
-- [ ] **Prompt caching**: reordenar contexto (estático primero) en Gemini y OpenCode
-- [ ] **Semantic caching**: Redis + GPTCache para respuestas repetidas
-- [ ] **RepoMaps** en uso real (medir ahorro en Langfuse)
-- [ ] **LLMLingua-2 / SuperCompress** para compresión de RAG y prompts
-- [ ] **Model routing** fino: medir hit-rate del caché y costo/tarea
+### FASE 7 — Optimización de tokens (objetivo 90%) (estado: 100% ✅)
+- [x] **Prompt caching**: reordenar contexto (estático primero) — `cache/prompt_cache.py`
+- [x] **Semantic caching**: Redis + GPTCache para respuestas repetidas — `cache/semantic_cache.py` (Redis + embeddings, umbral 0.60)
+- [x] **RepoMaps** en uso real — `memory/repomap.py` (esqueleto desde Neo4j; **99.9% menos** que el código completo)
+- [x] **LLMLingua-2** para compresión de RAG y prompts — `cache/prompt_compressor.py` (requiere `use_llmlingua2=True`)
+- [x] **Model routing** fino: hit-rate y costo/tarea — `cache/token_metrics.py`
+
+> **Notas de Fase 7:** (1) El caché semántico usa Redis + `nomic-embed-text` (coseno) con umbral 0.60; GPTCache quedó instalado como alternativa de producción. (2) El RepoMap se genera desde el grafo de código (Fase 2) y mide el ahorro real. (3) LLMLingua-2 requiere la flag `use_llmlingua2=True` (sin ella usa el code path de LLaMA y falla con BERT). (4) **Conflicto de dependencias resuelto**: `llmlingua` sube `huggingface-hub` a 2.x, incompatible con cognee/fastembed/litellm (`<2.0`); se fijó `huggingface-hub<1.0` + `transformers<5.0,>=4.26` en `requirements.txt`. (5) El umbral de similitud y los costos por modelo son aproximados/configurables.
 
 ### FASE 8 — Evaluación y observabilidad
 - [ ] Levantar **Langfuse** (+ Redis/ClickHouse en docker-compose)

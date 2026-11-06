@@ -13,3 +13,12 @@ graphiti-core==0.31.2
 mem0ai==2.2.1
 cognee==1.6.6
 ollama==0.6.3
+
+# Fase 7 - Optimización de tokens (caché semántico + compresión)
+gptcache==0.1.44
+llmlingua==0.2.2
+redis==8.1.0
+# Pin de compatibilidad: cognee/fastembed/litellm requieren huggingface-hub<1
+# y transformers<5; llmlingua requiere transformers>=4.26.
+huggingface-hub<1.0,>=0.34
+transformers<5.0,>=4.26
