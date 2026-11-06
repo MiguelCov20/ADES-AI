@@ -15,6 +15,7 @@ Ecosistema de desarrollo autónomo multi-agente. Combina 3 "cerebros" (nube, GPU
 3. Cada tarea delegada a un subagente debe tener contexto acotado (bounded work).
 4. Sigue el stack decidido en el plan (sección 4). Los cambios de decisión se registran en el plan.
 5. QA nunca ejecuta código fuera de un contenedor Docker (sandbox).
+6. Si al implementar queda algo pendiente (deuda técnica, TODOs, funciones no-op, mejoras diferidas), regístralo en la **Fase 10** de `docs/plan_ecosistema_ia.md` para no perderlo.
 
 ## Seguridad
 - NUNCA hagas commit de claves ni secretos. `.env` está en `.gitignore`.

@@ -344,11 +344,13 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Notas de Fase 5:** (1) El integrador mapea tipo→método: `skill`→clonar a `.opencode/skills/`, `mcp`→`mcp_config.json`, `tool`/`cli`/`sdk`→`registry/tools/`, `plugin`→`opencode.json`, `model`→`ollama pull`, `app`→`docker-compose.yml`. (2) `integrate --dry-run` devuelve el plan sin efectos secundarios. (3) `sdk` (web-llm) se integra como `tool` (dependencia), ya que el plan no define un método específico para SDKs.
 
-### FASE 6 — MCP + gateway
-- [ ] Crear `mcp_servers/mcp_config.json`
-- [ ] Levantar MCP: filesystem, git, GitHub, memory, sequential-thinking, Firecrawl, cognee-mcp
-- [ ] Instalar **Bifrost** como gateway (auth + scope)
-- [ ] Conectar orquestador a MCP (Developer lee/escribe archivos reales)
+### FASE 6 — MCP + gateway (estado: 100% ✅)
+- [x] Crear `mcp_servers/mcp_config.json` (7 servidores)
+- [x] Levantar MCP: filesystem, git, GitHub, memory, sequential-thinking, Firecrawl, cognee-mcp
+- [x] Instalar **Bifrost** como gateway (auth + scope) — servicio `gateway` en `docker-compose.yml` + `mcp_servers/gateway/README.md`
+- [x] Conectar orquestador a MCP (Developer lee/escribe archivos reales) — `mcp_servers/client.py`
+
+> **Notas de Fase 6:** (1) El cliente MCP (`mcp_servers/client.py`) usa el SDK oficial `mcp` y se probó contra el servidor `filesystem` real (npx): lista 14 herramientas y lee archivos del proyecto. (2) Bifrost se instaló como contenedor `maximhq/bifrost` (puerto 8080, Web UI en `http://localhost:8080`); provee auth/scope, failover y caché semántico. (3) Los secretos (GitHub/Firecrawl) se pasan con placeholders `${VAR}`; el cliente omite los no definidos. (4) `cognee-mcp` es un servidor **SSE** (no stdio): se arranca con `cognee-cli serve` (entry point instalado) y se expone en `http://127.0.0.1:8001/sse`; el cliente actual (stdio) cubre filesystem/git/github/memory/sequential-thinking/firecrawl, y cognee-mcp requeriría `sse_client`.
 
 ### FASE 7 — Optimización de tokens (objetivo 90%)
 - [ ] **Prompt caching**: reordenar contexto (estático primero) en Gemini y OpenCode
@@ -369,6 +371,14 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 - [ ] Workflow **OpenHands**: issue de GitHub → PR automático
 - [ ] Fine-tuning de un SLM (Qwen 3B/8B) con tus patrones vía **Unsloth**
 - [ ] (Opcional) Agentes en entorno simulado (Godot/Phaser) del reporte §6
+
+### FASE 10 — Completar integraciones y deuda técnica pendiente
+- [ ] Añadir soporte **SSE** al cliente MCP (`mcp_servers/client.py`): `sse_client` junto a `stdio_client`
+- [ ] Conectar **cognee-mcp** de punta a punta (`cognee-cli serve` → `http://127.0.0.1:8001/sse`)
+- [ ] Implementar el método `app` del integrador del Tool Registry (Fase 5, hoy no-op: no añade el servicio a `docker-compose.yml`)
+- [ ] Acotar `num_ctx` en los nodos de la fábrica (Fase 3) para evitar offload parcial a CPU de los modelos locales
+
+> **Notas de Fase 10 (deuda técnica detectada):** (1) `cognee-mcp` es un servidor **SSE** (no stdio), arrancado con `cognee-cli serve` en `http://127.0.0.1:8001/sse`; el cliente actual solo cubre stdio (filesystem, git, github, memory, sequential-thinking, firecrawl). (2) El método `app` del integrador (Fase 5) se dejó como no-op para no modificar `docker-compose.yml` automáticamente; requiere revisión manual. (3) Los modelos locales de Ollama cargan con la ventana completa de contexto (128K) por defecto → offload parcial a CPU; los nodos de la fábrica usan `ChatOpenAI` sin `num_ctx` (rendimiento, no correctitud).
 
 ---
 

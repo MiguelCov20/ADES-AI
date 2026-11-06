@@ -38,6 +38,14 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
+  # 4. Gateway de IA (Bifrost) — LLM + MCP + agent gateway (auth/scope/caché semántico)
+  gateway:
+    image: maximhq/bifrost
+    container_name: bifrost_gateway
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
   # (Espacio reservado para el contenedor de Agentes LangGraph)
   # (Espacio reservado para el servidor Ollama LLM Local con acceso a tu GPU de 16GB)
 
