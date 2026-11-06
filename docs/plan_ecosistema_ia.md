@@ -400,58 +400,60 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 Las 33 features que amplían el plan. Cada una está etiquetada por prioridad (🔴 esencial · 🟡 alto valor · 🟢 opcional) y mapeada a la fase donde se implementa. *(10 🔴 esenciales · 15 🟡 alto valor · 8 🟢 opcionales)*
 
+> **Estado de implementación (v1.0):** ✅ implementada (2) · ⚠️ parcial (5) · ❌ no implementada (26). La mayoría son capacidades de nivel superior que van más allá de las tareas concretas de cada fase; son candidatas a una futura "Fase 12" de features avanzadas o a v2.0.
+
 ### A. Autonomía — "Software Factory" avanzada
-1. 🔴 **Project Bootstrapper** — *"Crea un proyecto de X"* → PM + Arquitecto generan estructura, dependencias, CI y README en un comando. *(Fase 3)*
-2. 🔴 **Backlog auto-gestionado (ticket-driven)** — el PM mantiene un kanban persistente de tickets; los Developers trabajan solos en background hasta agotarlos. *(Fase 3)*
-3. 🟡 **Agente "Watchdog" 24/7** — corre en background, vigila el repo por cambios rotos y alerta sin que lo pidas. *(Fase 3)*
-4. 🟡 **Self-Healing pipeline** — si QA falla, reintenta con estrategia distinta (otro modelo, más contexto, otra librería) antes de rendirse. *(Fase 3)*
-5. 🟡 **Multi-proyecto simultáneo** — un workspace con N proyectos, cada uno con su memoria, agentes y estado. *(Transversal)*
+1. 🔴 **Project Bootstrapper** — *"Crea un proyecto de X"* → PM + Arquitecto generan estructura, dependencias, CI y README en un comando. *(Fase 3)* → ❌
+2. 🔴 **Backlog auto-gestionado (ticket-driven)** — el PM mantiene un kanban persistente de tickets; los Developers trabajan solos en background hasta agotarlos. *(Fase 3)* → ❌
+3. 🟡 **Agente "Watchdog" 24/7** — corre en background, vigila el repo por cambios rotos y alerta sin que lo pidas. *(Fase 3)* → ❌
+4. 🟡 **Self-Healing pipeline** — si QA falla, reintenta con estrategia distinta (otro modelo, más contexto, otra librería) antes de rendirse. *(Fase 3)* → ⚠️ (bucle Dev⇄QA básico, sin estrategias variadas)
+5. 🟡 **Multi-proyecto simultáneo** — un workspace con N proyectos, cada uno con su memoria, agentes y estado. *(Transversal)* → ❌
 
 ### B. Memoria permanente avanzada
-6. 🔴 **Memoria cross-proyecto** — lo aprendido en el proyecto A (ej: "prefieres FastAPI") se reutiliza automáticamente en B. *(Fase 2)*
-7. 🟡 **Consolidación nocturna (Reflection)** — proceso batch que resume el día, extrae lecciones y compacta la memoria. *(Fase 2)*
-8. 🟡 **"Vacuna" contra bugs** — cada bug resuelto se guarda como patrón para no repetirlo jamás. *(Fase 2)*
-9. 🟢 **Timeline de decisiones** — con Graphiti: *"¿por qué decidimos X en marzo?"* con historial temporal. *(Fase 2)*
+6. 🔴 **Memoria cross-proyecto** — lo aprendido en el proyecto A (ej: "prefieres FastAPI") se reutiliza automáticamente en B. *(Fase 2)* → ❌
+7. 🟡 **Consolidación nocturna (Reflection)** — proceso batch que resume el día, extrae lecciones y compacta la memoria. *(Fase 2)* → ❌
+8. 🟡 **"Vacuna" contra bugs** — cada bug resuelto se guarda como patrón para no repetirlo jamás. *(Fase 2)* → ❌
+9. 🟢 **Timeline de decisiones** — con Graphiti: *"¿por qué decidimos X en marzo?"* con historial temporal. *(Fase 2)* → ⚠️ (Graphiti temporal es la base; falta la feature de timeline)
 
 ### C. Optimización de tokens
-10. 🔴 **Token Budget Governor** — tope de gasto por tarea/proyecto; el router se adapta (local → barato → pesado). *(Fase 7)*
-11. 🟡 **Cache Hit-Rate Dashboard** — métrica en vivo de cuánto estás ahorrando. *(Fase 7)*
-12. 🟢 **Prefetch contextual predictivo** — precarga el contexto probable antes de pedirlo. *(Fase 7)*
+10. 🔴 **Token Budget Governor** — tope de gasto por tarea/proyecto; el router se adapta (local → barato → pesado). *(Fase 7)* → ❌ (hay métricas, pero no enforcement de presupuesto)
+11. 🟡 **Cache Hit-Rate Dashboard** — métrica en vivo de cuánto estás ahorrando. *(Fase 7)* → ⚠️ (hay `hit_rate` y reporte en texto, no dashboard en vivo)
+12. 🟢 **Prefetch contextual predictivo** — precarga el contexto probable antes de pedirlo. *(Fase 7)* → ❌
 
 ### D. Tool Registry — extensiones
-13. 🟡 **Marketplace interno con ratings** — puntuar/etiquetar herramientas ya probadas. *(Fase 5)*
-14. 🟡 **Detector de conflictos** — avisa si dos herramientas compiten (ej: dos MCP filesystem). *(Fase 5)*
-15. 🟡 **Version pinning + rollback** — fijar commit/versión de cada herramienta y revertir si rompe. *(Fase 5)*
-16. 🔴 **Instalación en sandbox + escaneo de seguridad** — auditar el repo (estilo AgentShield/Oathe) antes de activarlo. *(Fase 5)*
+13. 🟡 **Marketplace interno con ratings** — puntuar/etiquetar herramientas ya probadas. *(Fase 5)* → ❌
+14. 🟡 **Detector de conflictos** — avisa si dos herramientas compiten (ej: dos MCP filesystem). *(Fase 5)* → ❌
+15. 🟡 **Version pinning + rollback** — fijar commit/versión de cada herramienta y revertir si rompe. *(Fase 5)* → ❌
+16. 🔴 **Instalación en sandbox + escaneo de seguridad** — auditar el repo (estilo AgentShield/Oathe) antes de activarlo. *(Fase 5)* → ❌
 
 ### E. Evaluación y calidad
-17. 🟡 **Benchmark harness local** — mide a los agentes contra tareas estándar (estilo SWE-bench). *(Fase 8)*
-18. 🔴 **LLM Council como juez por defecto** — el piloto `llm-council` integrado para decisiones difíciles y evaluación. *(Fase 8)*
-19. 🟡 **Regression detector** — detecta si un cambio de prompt/modelo empeora la calidad de salida. *(Fase 8)*
+17. 🟡 **Benchmark harness local** — mide a los agentes contra tareas estándar (estilo SWE-bench). *(Fase 8)* → ❌
+18. 🔴 **LLM Council como juez por defecto** — el piloto `llm-council` integrado para decisiones difíciles y evaluación. *(Fase 8)* → ❌ (solo está en el catálogo, no integrado como juez)
+19. 🟡 **Regression detector** — detecta si un cambio de prompt/modelo empeora la calidad de salida. *(Fase 8)* → ❌
 
 ### F. Multi-modelo / enrutamiento
-20. 🔴 **Brain Selector automático** — analiza la complejidad y elige modelo + reasoning effort (más fino que el router básico). *(Fase 3)*
-21. 🟡 **Fallback en cascada** — si un modelo falla, escala solo al siguiente (local → flash → pro). *(Fase 3)*
-22. 🟢 **A/B testing de modelos** — compara dos modelos en la misma tarea y reporta el ganador. *(Fase 8)*
+20. 🔴 **Brain Selector automático** — analiza la complejidad y elige modelo + reasoning effort (más fino que el router básico). *(Fase 3)* → ⚠️ (el router clasifica complejidad→modelo, sin reasoning effort)
+21. 🟡 **Fallback en cascada** — si un modelo falla, escala solo al siguiente (local → flash → pro). *(Fase 3)* → ❌
+22. 🟢 **A/B testing de modelos** — compara dos modelos en la misma tarea y reporta el ganador. *(Fase 8)* → ❌
 
 ### G. Seguridad y gobernanza
-23. 🔴 **Secrets scanner continuo** — detecta keys expuestas antes del commit. *(Fase 0)*
-24. 🟢 **Auditoría anti-IA** — revisa vulnerabilidades inyectadas por otras IAs (reporte §7.4). *(Fase 9)*
-25. 🟢 **Modo "cuarentena"** — herramientas no verificadas solo corren aisladas hasta aprobación. *(Fase 5)*
+23. 🔴 **Secrets scanner continuo** — detecta keys expuestas antes del commit. *(Fase 0)* → ✅ (`environment/scan_secrets.py` + hook pre-commit)
+24. 🟢 **Auditoría anti-IA** — revisa vulnerabilidades inyectadas por otras IAs (reporte §7.4). *(Fase 9)* → ❌
+25. 🟢 **Modo "cuarentena"** — herramientas no verificadas solo corren aisladas hasta aprobación. *(Fase 5)* → ❌
 
 ### H. Interfaz / UX
-26. 🟡 **CLI unificado `ades`** — un solo comando para todo: `ades start`, `ades integrate X`, `ades status`, `ades tokens`. *(Transversal)*
-27. 🟡 **Dashboard web de control** — panel para ver agentes, tokens, memoria y herramientas activas. *(Fase 8)*
-28. 🟢 **Control por voz** — extiende los comandos de voz del registry a todo el ecosistema. *(Transversal)*
+26. 🟡 **CLI unificado `ades`** — un solo comando para todo: `ades start`, `ades integrate X`, `ades status`, `ades tokens`. *(Transversal)* → ❌
+27. 🟡 **Dashboard web de control** — panel para ver agentes, tokens, memoria y herramientas activas. *(Fase 8)* → ⚠️ (hay reporte en texto, no panel web)
+28. 🟢 **Control por voz** — extiende los comandos de voz del registry a todo el ecosistema. *(Transversal)* → ❌
 
 ### I. Inferencia local
-29. 🟡 **GPU Memory Manager** — carga/descarga modelos según demanda para no quedarte sin VRAM. *(Fase 1)*
-30. 🟢 **vLLM multi-model serving** — sirve varios modelos según el tráfico. *(Fase 9)*
+29. 🟡 **GPU Memory Manager** — carga/descarga modelos según demanda para no quedarte sin VRAM. *(Fase 1)* → ❌ (Ollama lo gestiona de forma básica; no hay manager propio)
+30. 🟢 **vLLM multi-model serving** — sirve varios modelos según el tráfico. *(Fase 9)* → ❌ (vLLM documentado, no desplegado)
 
 ### J. Automejora / recursividad
-31. 🔴 **Auto-skill Generator** — genera una `SKILL.md` automáticamente de las tareas que repites (inspirado en ECC). *(Fase 4)*
-32. 🟢 **Ecosistema automejorable** — los agentes proponen mejoras a sus propios prompts/skills y el sistema las evalúa antes de aplicarlas. *(Fase 9)*
-33. 🔴 **Agente Reclutador (meta-agente)** — crea, modifica y elimina agentes a pedido, eligiendo el LLM óptimo (nube vs local) y asignando skills, herramientas MCP y permisos. *(Fase 3)*
+31. 🔴 **Auto-skill Generator** — genera una `SKILL.md` automáticamente de las tareas que repites (inspirado en ECC). *(Fase 4)* → ❌
+32. 🟢 **Ecosistema automejorable** — los agentes proponen mejoras a sus propios prompts/skills y el sistema las evalúa antes de aplicarlas. *(Fase 9)* → ❌
+33. 🔴 **Agente Reclutador (meta-agente)** — crea, modifica y elimina agentes a pedido, eligiendo el LLM óptimo (nube vs local) y asignando skills, herramientas MCP y permisos. *(Fase 3)* → ✅ (`agents/reclutador.py`)
 
 ---
 
