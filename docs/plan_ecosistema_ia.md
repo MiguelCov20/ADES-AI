@@ -335,12 +335,14 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Notas de Fase 4:** (1) Obra Superpowers se instala como **plugin** (`plugins` en `opencode.json`), no como skills; se clonó a `.opencode/vendor/superpowers` (v7.0.2) y se referencia localmente. (2) oh-my-opencode (OmO) es un CLI standalone; se integraron sus skills compatibles con OpenCode (`github-triage`, `pre-publish-review`, `work-with-pr`) vía el array `skills`. (3) Las skills propias y las de oh-my-opencode ya son descubiertas por OpenCode en runtime. (4) `.opencode/vendor/` está **gitignored** (no se versionan ~12.9k archivos); si se pierde (cambio de rama, `git clean`, borrado manual), re-clónalo con `environment/setup_fase4.ps1`.
 
-### FASE 5 — Registro de Herramientas Integrables (Tool Registry)
-- [ ] Crear `registry/catalog.json` (esquema de metadatos) + `registry/state.json`
-- [ ] Implementar el **integrador** (skill del agente) con los 6 métodos de integración
-- [ ] Registrar los **4 repos piloto**: `ecc`, `llm-council`, `llmfit`, `web-llm`
-- [ ] Implementar los comandos de voz (integrar / activar / desactivar / agregar / listar)
-- [ ] Probar el flujo recursivo: *"Agrega `<repo>` a ADES-AI"*
+### FASE 5 — Registro de Herramientas Integrables (Tool Registry) (estado: 100% ✅)
+- [x] Crear `registry/catalog.json` (esquema de metadatos) + `registry/state.json`
+- [x] Implementar el **integrador** (`registry/integrator.py`) con los 6 métodos de integración
+- [x] Registrar los **4 repos piloto**: `ecc` (skill), `llm-council` (app), `llmfit` (tool), `web-llm` (sdk)
+- [x] Implementar los comandos de voz (`registry/cli.py`: list / search / add / integrate / activate / deactivate)
+- [x] Probar el flujo recursivo: *"Agrega `<repo>` a ADES-AI"* — `add <url>` deriva el id y lo registra
+
+> **Notas de Fase 5:** (1) El integrador mapea tipo→método: `skill`→clonar a `.opencode/skills/`, `mcp`→`mcp_config.json`, `tool`/`cli`/`sdk`→`registry/tools/`, `plugin`→`opencode.json`, `model`→`ollama pull`, `app`→`docker-compose.yml`. (2) `integrate --dry-run` devuelve el plan sin efectos secundarios. (3) `sdk` (web-llm) se integra como `tool` (dependencia), ya que el plan no define un método específico para SDKs.
 
 ### FASE 6 — MCP + gateway
 - [ ] Crear `mcp_servers/mcp_config.json`

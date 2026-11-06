@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "descripcion": "Catalogo de herramientas integrables (Tool Registry de ADES-AI). Repos de GitHub que los agentes pueden integrar bajo demanda.",
+  "herramientas": [
+    {
+      "id": "ecc",
+      "nombre": "ECC (Everything Claude Code)",
+      "tipo": "skill",
+      "url": "https://github.com/affaan-m/ECC",
+      "descripcion": "Framework de skills, reglas, hooks y seguridad para agentes de codigo (274k estrellas)",
+      "instalacion": "git clone",
+      "licencia": "consultar"
+    },
+    {
+      "id": "llm-council",
+      "nombre": "LLM Council",
+      "tipo": "app",
+      "url": "https://github.com/karpathy/llm-council",
+      "descripcion": "Consejo multi-LLM: varios modelos se revisan entre si de forma anonima (LLM-as-judge)",
+      "instalacion": "docker",
+      "licencia": "consultar"
+    },
+    {
+      "id": "llmfit",
+      "nombre": "llmfit",
+      "tipo": "tool",
+      "url": "https://github.com/AlexsJones/llmfit",
+      "descripcion": "Detecta tu hardware y recomienda que modelos locales puedes correr (38k estrellas)",
+      "instalacion": "git clone",
+      "licencia": "consultar"
+    },
+    {
+      "id": "web-llm",
+      "nombre": "WebLLM",
+      "tipo": "sdk",
+      "url": "https://github.com/mlc-ai/web-llm",
+      "descripcion": "Inferencia de LLMs en el navegador usando WebGPU (privada y sin servidor)",
+      "instalacion": "npm",
+      "licencia": "consultar"
+    }
+  ]
+}

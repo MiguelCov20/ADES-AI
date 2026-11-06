@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "proyecto": "ADES-AI",
+  "herramientas": {
+    "ecc": {
+      "activa": false,
+      "integrada": false
+    },
+    "llm-council": {
+      "activa": false,
+      "integrada": false
+    },
+    "llmfit": {
+      "activa": false,
+      "integrada": false
+    },
+    "web-llm": {
+      "activa": false,
+      "integrada": false
+    }
+  }
+}
