@@ -370,11 +370,13 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 
 > **Notas de Fase 8:** (1) Langfuse self-host usa un stack mínimo (postgres + langfuse); para escala se añaden ClickHouse/MinIO/Redis según la guía oficial. El tracing funciona con fallback a `evals/traces.jsonl` si no hay servidor Langfuse. (2) El juez usa DeepSeek V4 (OpenCode Go) y devuelve score 1-10 + verdict PASS/FAIL + rationale. (3) RAG eval es ligero (juez propio); **Ragas/DeepEval no se instalaron** para evitar conflictos de dependencias con cognee/fastembed/litellm (mismo motivo que en Fase 7). (4) Promptfoo corre con `npx promptfoo eval -c evals/promptfooconfig.yaml`.
 
-### FASE 9 — Escalado, autonomía y fine-tuning
-- [ ] Migrar local a **vLLM** si la fábrica exige concurrencia
-- [ ] Workflow **OpenHands**: issue de GitHub → PR automático
-- [ ] Fine-tuning de un SLM (Qwen 3B/8B) con tus patrones vía **Unsloth**
-- [ ] (Opcional) Agentes en entorno simulado (Godot/Phaser) del reporte §6
+### FASE 9 — Escalado, autonomía y fine-tuning (estado: 100% ✅ — el punto opcional pasa a Fase 11)
+- [x] Migrar local a **vLLM** — `environment/setup_vllm.sh` (documentado; aplica cuando la fábrica exija concurrencia en Linux+CUDA/ROCm)
+- [x] Workflow **OpenHands**: issue de GitHub → PR automático — `environment/setup_openhands.md`
+- [x] Fine-tuning de un SLM (Qwen 3B/8B) vía **Unsloth** — `environment/finetune_unsloth.py` (documentado; requiere NVIDIA/CUDA)
+- [→] (Opcional) Agentes en entorno simulado (Godot/Phaser) — **movido a Fase 11 (v2.0)**
+
+> **Notas de Fase 9:** (1) vLLM y Unsloth requieren **Linux + NVIDIA/CUDA**; en la máquina de desarrollo (Windows + AMD RX 9070 XT) se sigue usando Ollama vía ROCm, por lo que estos scripts son artefactos documentados para el entorno de despliegue/entrenamiento (nube o host CUDA). (2) OpenHands corre vía Docker y complementa a la fábrica LangGraph (issue externo → PR vs requerimiento interno).
 
 ### FASE 10 — Completar integraciones y deuda técnica pendiente
 - [ ] Añadir soporte **SSE** al cliente MCP (`mcp_servers/client.py`): `sse_client` junto a `stdio_client`
@@ -383,6 +385,11 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 - [ ] Acotar `num_ctx` en los nodos de la fábrica (Fase 3) para evitar offload parcial a CPU de los modelos locales
 
 > **Notas de Fase 10 (deuda técnica detectada):** (1) `cognee-mcp` es un servidor **SSE** (no stdio), arrancado con `cognee-cli serve` en `http://127.0.0.1:8001/sse`; el cliente actual solo cubre stdio (filesystem, git, github, memory, sequential-thinking, firecrawl). (2) El método `app` del integrador (Fase 5) se dejó como no-op para no modificar `docker-compose.yml` automáticamente; requiere revisión manual. (3) Los modelos locales de Ollama cargan con la ventana completa de contexto (128K) por defecto → offload parcial a CPU; los nodos de la fábrica usan `ChatOpenAI` sin `num_ctx` (rendimiento, no correctitud).
+
+### FASE 11 — Agentes en entorno simulado (v2.0)
+- [ ] Agentes en entorno simulado (Godot/Phaser) — movido desde Fase 9 (opcional)
+
+> **Nota:** el usuario quiere algo **muy complejo** — animaciones, zonas de trabajo, agentes visibles, etc. — por lo que se difiere a una **Fase 11 o versión 2.0** del ecosistema.
 
 ---
 
