@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(*/.ades/runtime/llamacpp/*)"
+      "Bash(*/IA/llamacpp/*)"
     ]
   }
 }
