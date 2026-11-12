@@ -17,6 +17,8 @@ import re
 import sys
 import unicodedata
 
+import core.config  # noqa: F401  (carga .env: HF_HOME -> modelos de whisper en F:/IA)
+
 ACCIONES = {
     "integrar": "Integrar una herramienta del registry (args: herramienta, proyecto)",
     "activar": "Activar una herramienta (args: herramienta)",

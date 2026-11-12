@@ -460,7 +460,7 @@ Auditoría del 11/11/2026: los módulos existían pero no estaban conectados y n
   - Todo pasa por Bifrost, con virtual keys `ades-factory` (todo) y `ades-local` (solo Ollama).
   - Las métricas van a SQLite y Langfuse.
 - [x] **31 features** de la sección 6 implementadas; ver allí el estado de cada una (2 quedan parciales).
-- [x] **Tests v1.2** (llama.cpp activo): `python -m pytest -q` → **249 passed, 0 failed**.
+- [x] **Tests v1.2** (llama.cpp activo): `python -m pytest -q` → **249 passed, 0 failed**. Verificación final del 12/11/2026, con modelos en `F:/IA` y Qwen3.6: **251 passed, 0 failed**. KPI 2/3: 3/3 ok a $0; uno se corrigió en la iteración 4 gracias a Qwen3.6 (local-alt).
 - [x] **Tests**: `python -m pytest -q` → **230 passed, 0 failed** (11/11/2026, unitarios + live con Docker, Ollama, Neo4j, Redis, Langfuse y nube). **KPIs** medidos con `kpis/` (sección 8).
 
 ---
