@@ -1,0 +1,9 @@
+PS> x
+llamadas 969 · cache hits 56 (hit-rate 5.8%)
+tokens in/out 1406682/874453 · locales ($0) 1435997
+costo $0.23052 · errores 157
+  kpi-baseline deepseek-v4-pro                14 llamadas   178153 tok $0.11816
+  kpi-ades     deepseek-v4-pro                42 llamadas    24937 tok $0.03053
+  kpi-baseline gemini-flash-lite-latest       18 llamadas   332048 tok $0.02665
+  judge        deepseek-v4.1-flash            31 llamadas    78227 tok $0.01286
+  reviewer     deepseek-v4-pro                22 llamadas     4992 tok $0.00751

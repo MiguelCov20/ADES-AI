@@ -1,0 +1,8 @@
+PS> ades tools search llm
+=== Resultados para 'llm' (3) — ordenados por rating ===
+  llm-council (app) [  -   / 0 votos]: Consejo multi-LLM: varios modelos se revisan entre si de forma anonima (LLM-as-judge)
+    url: https://github.com/karpathy/llm-council
+  llmfit (tool) [  -   / 0 votos]: Detecta tu hardware y recomienda que modelos locales puedes correr (38k estrellas)
+    url: https://github.com/AlexsJones/llmfit
+  web-llm (sdk) [  -   / 0 votos]: Inferencia de LLMs en el navegador usando WebGPU (privada y sin servidor)
+    url: https://github.com/mlc-ai/web-llm

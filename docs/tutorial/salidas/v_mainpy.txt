@@ -1,0 +1,29 @@
+PS> x
+from fastapi import FastAPI, HTTPException, status
+from typing import List
+from models import Item, ItemCreate
+from database import db
+
+app = FastAPI(title="Shopping List API", version="1.0.0")
+
+@app.post("/items", response_model=Item, status_code=status.HTTP_201_CREATED)
+def create_item(item: ItemCreate):
+    """Agrega un nuevo producto a la lista de compras."""
+    new_item = db.add(name=item.name, quantity=item.quantity)
+    return new_item
+
+@app.get("/items", response_model=List[Item])
+def list_items():
+    """Lista todos los productos registrados."""
+    return db.get_all()
+
+@app.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_item(item_id: int):
+    """Elimina un producto por su ID. Retorna 404 si no existe."""
+    deleted = db.delete(item_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Item con id {item_id} no encontrado"
+        )
+    return None

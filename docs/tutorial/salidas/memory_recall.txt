@@ -1,0 +1,3 @@
+﻿PS> ades memory recall "que framework uso para APIs"
+Memoria del usuario (preferencias/decisiones/lecciones previas):
+- [Preferencia, global] Prefiero FastAPI y pytest para las APIs

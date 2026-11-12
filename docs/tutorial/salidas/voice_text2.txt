@@ -1,0 +1,2 @@
+﻿PS> ades voice "dime cuantos tokens llevo"
+{"accion": "tokens", "args": {}, "fuente": "reglas", "texto": "dime cuantos tokens llevo", "invocacion": ["ades", "tokens"]}

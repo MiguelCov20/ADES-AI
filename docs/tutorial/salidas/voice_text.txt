@@ -1,0 +1,2 @@
+﻿PS> ades voice "crea un proyecto de tienda online"
+{"accion": "crear_proyecto", "args": {"descripcion": "tienda online", "nombre": "tienda-online"}, "fuente": "reglas", "texto": "crea un proyecto de tienda online", "invocacion": ["ades", "project", "create", "tienda-online"]}

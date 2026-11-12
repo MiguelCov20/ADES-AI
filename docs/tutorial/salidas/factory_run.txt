@@ -1,0 +1,38 @@
+﻿PS> ades run "API FastAPI de lista de compras: POST /items agrega un producto con nombre y cantidad (entero mayor que 0), GET /items lista todos, DELETE /items/{id} elimina y responde 404 si no existe" --project tutorial-compras
+
+=== FABRICA [tutorial-compras]: API FastAPI de lista de compras: POST /items agrega un producto con nombre y cantidad (entero mayor que 0), GET /items lista todos, DELETE /items/{id} elimina y responde 404 si no existe ===
+
+ades.bat : Secure MCP Filesystem Server running on stdio
+En línea: 1 Carácter: 896
++ ... } }) -join ' ')) | Out-File $f -Encoding utf8; & ades @a 2>&1 | Where ...
++                                                    ~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Secure MCP File...unning on stdio:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Client does not support MCP Roots, using allowed directories set from server args: [ 'C:\\Users\\Miguel 
+Dev\\Desktop\\Proyectos' ]
+Secure MCP Filesystem Server running on stdio
+Client does not support MCP Roots, using allowed directories set from server args: [ 'C:\\Users\\Miguel 
+Dev\\Desktop\\Proyectos' ]
+Secure MCP Filesystem Server running on stdio
+Client does not support MCP Roots, using allowed directories set from server args: [ 'C:\\Users\\Miguel 
+Dev\\Desktop\\Proyectos' ]
+Secure MCP Filesystem Server running on stdio
+Client does not support MCP Roots, using allowed directories set from server args: [ 'C:\\Users\\Miguel 
+Dev\\Desktop\\Proyectos' ]
+Secure MCP Filesystem Server running on stdio
+Client does not support MCP Roots, using allowed directories set from server args: [ 'C:\\Users\\Miguel 
+Dev\\Desktop\\Proyectos' ]
+estado=ok run=run-7afe75e53b07 iteraciones=3 estrategias=['base:ollama/gpt-oss:20b', 'contexto:ollama/gpt-oss:20b', 'local-alt:ollama/qwen3.6:35b-a3b']
+sandbox={'passed': True, 'tests_run': 16, 'tests_failed': 0, 'exit_code': 0} alucinaciones=[]
+archivos=['database.py', 'test_main.py', 'main.py', 'models.py', 'requirements.txt']
+escritos=['C:\\Users\\Miguel Dev\\Desktop\\Proyectos\\ADES-AI\\workspace\\tutorial-compras\\database.py', 'C:\\Users\\Miguel Dev\\Desktop\\Proyectos\\ADES-AI\\workspace\\tutorial-compras\\test_main.py', 'C:\\Users\\Miguel Dev\\Desktop\\Proyectos\\ADES-AI\\workspace\\tutorial-compras\\main.py', 'C:\\Users\\Miguel Dev\\Desktop\\Proyectos\\ADES-AI\\workspace\\tutorial-compras\\models.py', 'C:\\Users\\Miguel Dev\\Desktop\\Proyectos\\ADES-AI\\workspace\\tutorial-compras\\requirements.txt']
+llamadas=14 tokens=13247+21306 costo=$0.00072 cache_hits=0 duracion=696.7s
+
+--- REVIEW ---
+**Verdict**  
+- **Overall**: The code is functional, clean, and passes the supplied tests.  
+- **Risks**:  
+  1. **Thread‑safety / Concurrency** – `InMemoryDB` is not protected by any lock. In a real FastAPI deployment (async workers, multiple processes) concurrent access could corrupt `_storage` or `_counter`.  
+  2. **Persistence & Production suitability** – The DB is in‑memory; a server restart wipes data. This is fine for demos but not for production.  
+  3. **Global mutable state** – `db` is a singleton that all routes share. This makes testing harder (tests share state) and can cause hid

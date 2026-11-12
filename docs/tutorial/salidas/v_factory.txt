@@ -1,0 +1,9 @@
+PS> x
+=== FABRICA [tutorial-compras] ===
+estado=ok run=run-7afe75e53b07 iteraciones=3 estrategias=['base:ollama/gpt-oss:20b', 'contexto:ollama/gpt-oss:20b', 'local-alt:ollama/qwen3.6:35b-a3b']
+sandbox={'passed': True, 'tests_run': 16, 'tests_failed': 0, 'exit_code': 0} alucinaciones=[]
+archivos=['database.py', 'test_main.py', 'main.py', 'models.py', 'requirements.txt']
+llamadas=14 tokens=13247+21306 costo=$0.00072 cache_hits=0 duracion=696.7s
+--- REVIEW ---
+**Verdict**  
+- **Overall**: The code is functional, clean, and passes the supplied tests.  

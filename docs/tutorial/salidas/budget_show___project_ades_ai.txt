@@ -1,0 +1,13 @@
+﻿PS> ades budget show --project ades-ai
+{
+  "budget": {
+    "usd": 5.0,
+    "paid_tokens": 5000000
+  },
+  "spent": {
+    "cost": 0.018557,
+    "paid_tokens": 149391
+  },
+  "used_fraction": 0.0299,
+  "tier": "any"
+}

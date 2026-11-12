@@ -1,0 +1,6 @@
+PS> x
+{'id': '1734c0cd12cc4c59', 'ts': 1794475024.85132, 'updated': 1794475024.85132, 'kind': 'preference', 'scope': 'global', 'project': 'ades-ai', 'text': 'Prefiero FastAPI y pytest para las APIs', 'source': 'usuario', 'hits': 1, 'mem0': None, 'duplicate': False}
+
+PS> ades memory recall "que framework uso para APIs"
+Memoria del usuario (preferencias/decisiones/lecciones previas):
+- [Preferencia, global] Prefiero FastAPI y pytest para las APIs

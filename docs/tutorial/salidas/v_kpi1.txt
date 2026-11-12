@@ -1,0 +1,26 @@
+PS> x
+  t1: ctx 44673 -> 3028 chars · ades=ollama/gpt-oss:20b · repetido cache=True · scores 10/10
+  t2: ctx 114805 -> 10150 chars · ades=ollama/gpt-oss:20b · repetido cache=True · scores 10/3
+  t3: ctx 10390 -> 2562 chars · ades=ollama/llama3.2:3b · repetido cache=True · scores 10/10
+  t4: ctx 44673 -> 2812 chars · ades=ollama/gpt-oss:20b · repetido cache=True · scores 10/10
+  t5: ctx 91767 -> 7279 chars · ades=ollama/gpt-oss:20b · repetido cache=True · scores 10/10
+  t6: ctx 70130 -> 3838 chars · ades=ollama/gpt-oss:20b · repetido cache=True · scores 10/10
+    "baseline": {
+      "total": 119536,
+      "cost": 0.009555,
+    "ades": {
+      "total": 16222,
+      "cost": 0,
+    "repetido": {
+      "total": 0,
+      "cost": 0,
+  "ahorro_tokens_ades": 0.8643,
+  "ahorro_tokens_repetido": 1.0,
+  "ahorro_tokens_pagados_ades": 1.0,
+  "ahorro_costo_ades": 1.0,
+  "score_medio_baseline": 10.0,
+  "score_medio_ades": 8.83,
+  "calidad_ok": true,
+  "medicion_valida": true,
+  "kpi_70": true,
+  "kpi_90_repetido": true

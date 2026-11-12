@@ -1,0 +1,2 @@
+﻿PS> ades memory remember "Prefiero FastAPI y pytest para las APIs"
+{'id': '1734c0cd12cc4c59', 'ts': 1794475024.85132, 'updated': 1794475024.85132, 'kind': 'preference', 'scope': 'global', 'project': 'ades-ai', 'text': 'Prefiero FastAPI y pytest para las APIs', 'source': 'usuario', 'hits': 1, 'mem0': None, 'duplicate': False}

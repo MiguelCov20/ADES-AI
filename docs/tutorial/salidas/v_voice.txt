@@ -1,0 +1,5 @@
+PS> x
+{"accion": "crear_proyecto", "args": {"descripcion": "tienda online", "nombre": "tienda-online"}, "fuente": "reglas", "texto": "crea un proyecto de tienda online", "invocacion": ["ades", "project", "create", "tienda-online"]}
+
+PS> ades voice "dime cuantos tokens llevo"
+{"accion": "tokens", "args": {}, "fuente": "reglas", "texto": "dime cuantos tokens llevo", "invocacion": ["ades", "tokens"]}

@@ -1,0 +1,2 @@
+PS> ades project create tutorial-compras
+{'id': 'tutorial-compras', 'path': 'C:\\Users\\Miguel Dev\\Desktop\\Proyectos\\ADES-AI\\workspace\\tutorial-compras', 'created': 1794471967.285372, 'descripcion': ''}

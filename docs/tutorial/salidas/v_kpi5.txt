@@ -1,0 +1,15 @@
+PS> x
+"backend": "ollama",
+"ok": 12,
+"throughput_tok_s": 72.3,
+"latencia_p95_s": 48.9,
+"vram_pico_gb": 15.11
+"backend": "llamacpp",
+"ok": 12,
+"throughput_tok_s": 204.8,
+"latencia_p95_s": 18.4,
+"vram_pico_gb": 15.5,
+"slots_ocupados_pico": 8,
+"todo_en_gpu": true
+"mejora_throughput_x": 2.83,
+"kpi5": true

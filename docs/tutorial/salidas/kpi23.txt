@@ -1,0 +1,9 @@
+PS> python -m kpis.kpi_loop
+  ok it=1 sandbox={'passed': True, 'tests_run': 15, 'tests_failed': 0, 'exit_code': 0} dev/qa=$0.0 total=$0.000505
+  ok it=2 sandbox={'passed': True, 'tests_run': 5, 'tests_failed': 0, 'exit_code': 0, 'tests_qa_descartados': ['test_convertir_function_formula', 'test_convertir_endpoint_returns_correct_response']} dev/qa=$0.0 total=$0.000437
+  failed it=4 sandbox={'passed': False, 'tests_run': 57, 'tests_failed': 2, 'exit_code': 1} dev/qa=$0.0 total=$0.00052
+  "fecha": "20261112-023451",
+  "proyecto": "kpi-loop-20261112-023451",
+  "kpi2": true,
+  "kpi3": false,
+  "runs_con_correccion": 2

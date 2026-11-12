@@ -1,0 +1,23 @@
+﻿PS> ades status
+Servicios:
+  OK  Neo4j     http://localhost:7474
+  OK  Qdrant    http://localhost:6333
+  OK  Bifrost   http://localhost:8080
+  OK  Langfuse  http://localhost:3000/api/public/health
+  OK  Ollama    http://localhost:11434/api/tags
+GPU: 0/16.0 GB · cargados: ninguno
+Proyectos:
+  ades-ai          gasto $0.0186/5.0 (3.0%, nivel any)
+  demo-api         gasto $0.0105/5.0 (0.3%, nivel any)
+  kpi-loop-20261111-172356 gasto $0.0030/5.0 (0.2%, nivel any)
+  kpi-loop-20261111-175057 gasto $0.0022/5.0 (0.2%, nivel any)
+  kpi-loop-20261111-194206 gasto $0.0005/5.0 (0.0%, nivel any)
+  kpi-loop-20261111-201624 gasto $0.0009/5.0 (0.1%, nivel any)
+  kpi-loop-20261111-203814 gasto $0.0010/5.0 (0.1%, nivel any)
+  kpi-loop-20261111-210909 gasto $0.0002/5.0 (0.0%, nivel any)
+  kpi-loop-20261111-211238 gasto $0.0016/5.0 (0.1%, nivel any)
+  kpi-loop-20261111-215811 gasto $0.0011/5.0 (0.1%, nivel any)
+  kpi-loop-20261111-223037 gasto $0.0017/5.0 (0.2%, nivel any)
+  kpi-loop-20261111-230402 gasto $0.0018/5.0 (0.2%, nivel any)
+  kpi-loop-20261111-231139 gasto $0.0017/5.0 (0.2%, nivel any)
+  kpi-loop-20261112-015043 gasto $0.0029/5.0 (0.2%, nivel any)

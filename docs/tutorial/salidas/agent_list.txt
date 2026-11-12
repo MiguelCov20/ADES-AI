@@ -1,0 +1,10 @@
+﻿PS> ades agent list
+  reclutador     Reclutador           -> opencode/deepseek-v4-pro
+  pm             Project Manager      -> gemini/auto
+  arquitecto     Arquitecto           -> gemini/auto
+  dev_backend    Developer Backend    -> ollama/gpt-oss:20b
+  dev_frontend   Developer Frontend   -> ollama/qwen3.6:35b-a3b
+  qa             QA Tester            -> ollama/gpt-oss:20b
+  reviewer       Code Reviewer        -> opencode/deepseek-v4-pro
+  devops         DevOps               -> opencode/deepseek-v4.1-flash
+  explorador     Explorador           -> ollama/llama3.2:3b

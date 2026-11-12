@@ -1,0 +1,6 @@
+﻿PS> ades tools list
+=== Herramientas (catalogo y estado) ===
+  ecc            skill  inactiva no integrada  sin_verificar            ECC (Everything Claude Code)
+  llm-council    app    inactiva no integrada  sin_verificar            LLM Council
+  llmfit         tool   inactiva no integrada  sin_verificar            llmfit
+  web-llm        sdk    inactiva no integrada  sin_verificar            WebLLM

@@ -1,0 +1,7 @@
+﻿PS> ades gpu
+{
+  "vram_gb": 16.0,
+  "loaded": [],
+  "used_gb": 0,
+  "cpu_offload": []
+}
