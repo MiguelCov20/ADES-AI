@@ -89,6 +89,16 @@ def _llm_backend() -> tuple[str, str, dict, str, str]:
         return (GEMINI_OPENAI_BASE, os.getenv("GOOGLE_API_KEY", ""), {},
                 os.getenv("GRAPHITI_MODEL", "gemini-flash-lite-latest"),
                 os.getenv("GRAPHITI_SMALL_MODEL", "gemini-flash-lite-latest"))
+    try:
+        from core import local_serving
+        if local_serving.enabled():
+            # Con llama.cpp activo se usa el MISMO llama-server: cargar gpt-oss también en
+            # Ollama duplicaba el modelo en la GPU (12 GB desbordados a la RAM).
+            base = local_serving.ensure("gpt-oss:20b")
+            alias = local_serving.config_for("gpt-oss:20b")["alias"]
+            return (base, "local", {}, alias, alias)
+    except Exception:
+        pass
     model = os.getenv("GRAPHITI_MODEL", "gpt-oss:20b-ctx16k")
     return (OLLAMA_BASE, "ollama", {}, model, os.getenv("GRAPHITI_SMALL_MODEL", model))
 
@@ -98,7 +108,7 @@ def build_graphiti() -> Graphiti:
     base, key, headers, model, small = _llm_backend()
     llm_client = AsyncOpenAI(base_url=base, api_key=key, default_headers=headers or None)
     cfg = LLMConfig(api_key=key, model=model, small_model=small, base_url=base)
-    if base == OLLAMA_BASE:
+    if base == OLLAMA_BASE or key == "local":
         # Modelos locales: cliente genérico (salida JSON) en vez de structured outputs
         from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
         llm = OpenAIGenericClient(config=cfg, client=llm_client)

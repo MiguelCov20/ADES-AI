@@ -54,9 +54,42 @@ def ollama_variant(model: str) -> str:
     return model if model.endswith(CTX_VARIANT_SUFFIX) else model + CTX_VARIANT_SUFFIX
 
 
+def _llamacpp_alias(m: str) -> str | None:
+    """Alias de llama-server si los modelos locales se sirven con llama.cpp (KPI 5)."""
+    from core import local_serving
+    if not local_serving.enabled():
+        return None
+    cfg = local_serving.config_for(m)
+    return local_serving.config_for(local_serving.resolve(m))["alias"] if cfg else None
+
+
+DEFAULT_TEMPERATURE = 0.2
+
+
+def _sampling(m: str, temperature: float) -> float:
+    """Temperatura recomendada por el modelo servido con llama.cpp (gpt-oss: 1.0).
+
+    Solo sustituye la temperatura POR DEFECTO: si el llamador pide otra (p. ej. QA usa 0.3
+    para escribir tests precisos), se respeta. Con 1.0 en todo, QA inventaba requisitos."""
+    if temperature != DEFAULT_TEMPERATURE:
+        return temperature
+    from core import local_serving
+    cfg = local_serving.config_for(local_serving.resolve(m)) or {}
+    return cfg.get("sampling", {}).get("temperature", temperature)
+
+
 def _via_bifrost(provider: str, m: str, temperature: float, session_id: str | None,
                  effort: str | None, timeout: float, max_retries: int):
     vk = os.getenv("BIFROST_VK_LOCAL" if provider == "ollama" else "BIFROST_VK_FACTORY", "")
+    alias = _llamacpp_alias(m) if provider == "ollama" else None
+    if alias:
+        # llama-server registrado en Bifrost como proveedor "vllm" (OpenAI-compatible): en
+        # Linux la misma entrada apunta a vLLM real sin cambiar el código.
+        kw = {"reasoning_effort": effort} if effort and alias.startswith("gpt-oss") else {}
+        temperature = _sampling(m, temperature)
+        return ChatOpenAI(model=f"vllm/{alias}", temperature=temperature, api_key=vk or "bifrost",
+                          base_url=BIFROST_URL, timeout=max(timeout, 600), max_retries=max_retries,
+                          default_headers={"x-bf-vk": vk, "User-Agent": "ades-ai/1.0"}, **kw)
     model = ollama_variant(m) if provider == "ollama" else m
     headers = {"x-bf-vk": vk, "User-Agent": "ades-ai/1.0"}
     if provider == "opencode":
@@ -105,6 +138,14 @@ def get_llm(provider: str, model: str | None = None, temperature: float = 0.2,
                 "User-Agent": "ades-ai/1.0",
             },
         )
+
+    if provider == "ollama" and _llamacpp_alias(m):
+        from core import local_serving
+        alias = _llamacpp_alias(m)
+        kw = {"reasoning_effort": effort} if effort and alias.startswith("gpt-oss") else {}
+        return ChatOpenAI(model=alias, temperature=_sampling(m, temperature), api_key="local",
+                          base_url=local_serving.url(local_serving.resolve(m)) + "/v1",
+                          timeout=max(timeout, 600), max_retries=max_retries, **kw)
 
     if provider == "ollama":
         # Acotar num_ctx para que el modelo + KV cache quepan en 16 GB de VRAM.

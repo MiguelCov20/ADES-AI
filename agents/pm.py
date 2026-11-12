@@ -13,7 +13,7 @@ def pm_node(state: dict) -> dict:
         return {"prd": requerimiento, "tickets": t}
     ctx = memory_context(requerimiento, state.get("project"))
     res = call_agent("pm", get_prompt("pm"), f"Requerimiento del usuario: {requerimiento}",
-                     state, context=ctx, fallback=("gemini", "auto"))
+                     state, context=ctx, fallback=("gemini", "auto"), json_mode=True)
     data = parse_json(res.text) or {}
     prd = data.get("prd") or res.text
     tickets = data.get("tickets") or [{"titulo": requerimiento[:80],

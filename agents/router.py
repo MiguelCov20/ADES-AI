@@ -66,8 +66,39 @@ def _heuristic(task: str) -> str:
     return "medium"
 
 
+def _classify_llamacpp(task: str) -> str | None:
+    """Con llama.cpp activo: clasifica con el modelo YA cargado en llama-server (gpt-oss).
+    Cargar llama3.2 en Ollama a la vez no cabe en 16 GB junto a gpt-oss (≈15 GB)."""
+    from core import local_serving
+    if not local_serving.enabled():
+        return None
+    model = next((m for m in local_serving._procs if local_serving.healthy(m)), None)
+    if model is None:
+        return None
+    body = json.dumps({
+        "model": local_serving.config_for(model)["alias"], "temperature": 0, "max_tokens": 200,
+        "reasoning_effort": "low",
+        "messages": [{"role": "user", "content": (
+            "Classify the complexity of this programming task with ONE word only: "
+            f"simple, medium or complex.\n\nTask: {task}")}]}).encode()
+    req = urllib.request.Request(local_serving.url(model) + "/v1/chat/completions", data=body,
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        msg = json.loads(resp.read())["choices"][0]["message"]
+    return parse_label(msg.get("content") or "")
+
+
 def _classify_llm(task: str) -> str | None:
     """Clasifica con llama3.2:3b; devuelve 'simple'|'medium'|'complex' o None."""
+    try:
+        label = _classify_llamacpp(task)
+        if label:
+            return label
+    except Exception:
+        pass
+    from core import local_serving
+    if local_serving.enabled() and local_serving._procs:
+        return None  # modelo grande en llama-server: no cargar otro en Ollama -> heurística
     payload = {
         "model": "llama3.2:3b",
         "prompt": (

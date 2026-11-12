@@ -24,6 +24,20 @@ QA_TEST_FILE = "test_qa_acceptance.py"
 _VERDICT = re.compile(r"^\W*(?:VEREDICTO|VERDICT)?\s*:?\s*\**\s*(PASS|FAIL)\b", re.I)
 
 
+MAX_QA_REGEN = 2
+_MISMATCH = re.compile(r"(ImportError|ModuleNotFoundError|AttributeError|NameError|TypeError|"
+                       r"ERROR collecting|Interrupted: \d+ error)")
+
+
+def qa_mismatch(output: str) -> bool:
+    """¿Los fallos son de los tests de QA por desajuste con el código, y los del Developer
+    pasan? (lógica pura, testeable)."""
+    failed = re.findall(r"^(?:FAILED|ERROR) (\S+?)(?:::|\s|$)", output, re.M)
+    if not failed or any(f != QA_TEST_FILE for f in failed):
+        return False
+    return _MISMATCH.search(output) is not None
+
+
 def _parse_veredicto(text: str) -> str:
     """Lee el veredicto SOLO de la primera línea no vacía. Ambiguo -> FAIL (conservador)."""
     for line in text.strip().splitlines():
@@ -53,7 +67,10 @@ def _gen_acceptance_tests(state: dict, files: dict) -> str | None:
               "la lista de simbolos. Sin red. Para FastAPI usa fastapi.testclient.TestClient. "
               "Prueba COMPORTAMIENTO (codigos de estado, valores devueltos, excepciones), no "
               "textos internos de errores de FastAPI/Pydantic ni archivos como requirements.txt; "
-              "no leas archivos fuera del directorio actual. "
+              "no leas archivos fuera del directorio actual. Prueba SOLO lo que el requerimiento "
+              "y los criterios dicen LITERALMENTE: no inventes requisitos (espacios, formatos, "
+              "tipos de retorno o casos que no se mencionan). Importa los modulos por el nombre "
+              "de archivo dado (p. ej. 'from inventario import Inventario' para inventario.py). "
               f"Devuelve SOLO un bloque ```python``` con el contenido de {QA_TEST_FILE}.")
     crit = []
     for t in state.get("tickets") or []:
@@ -62,7 +79,7 @@ def _gen_acceptance_tests(state: dict, files: dict) -> str | None:
             + ("Criterios:\n" + "\n".join(f"- {c}" for c in crit) + "\n" if crit else "")
             + f"Archivos: {names}\nSimbolos disponibles:\n" + "\n".join(sigs[:80]))
     res = call_agent("qa", system, user, state, fallback=("ollama", "gpt-oss:20b"),
-                     effort="medium")
+                     effort="medium", temperature=QA_TEMPERATURE)
     blocks = re.findall(r"```(?:python)?\s*\n(.*?)```", res.text, re.S)
     code = blocks[0] if blocks else res.text
     code = re.sub(r"^\s*#\s*(FILE:\s*)?test_qa_acceptance\.py\s*\n", "", code)
@@ -71,6 +88,55 @@ def _gen_acceptance_tests(state: dict, files: dict) -> str | None:
     except SyntaxError:
         return None
     return code if "def test_" in code else None
+
+
+QA_TEMPERATURE = 0.3
+
+
+def only_qa_tests_failed(output: str) -> list[str]:
+    """Nombres de tests de QA que fallan, si SOLO fallan tests de QA (si no, [])."""
+    failed = re.findall(r"^(?:FAILED|ERROR) (\S+?)::(\w+)", output, re.M)
+    if not failed or any(f != QA_TEST_FILE for f, _ in failed):
+        return []
+    return sorted({t for _, t in failed})
+
+
+def drop_tests(code: str, names: list[str]) -> str:
+    """Quita del archivo de tests las funciones `names` (lógica pura)."""
+    tree = ast.parse(code)
+    tree.body = [n for n in tree.body
+                 if not (isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name in names)]
+    return ast.unparse(tree) + "\n"
+
+
+def _arbitrate(state: dict, qa_tests: str, output: str, failing: list[str]) -> list[str]:
+    """QA revisa SUS tests que fallan: ¿exigen algo que el requerimiento no pide?
+    Devuelve los nombres de tests inválidos (se descartan antes de culpar al código)."""
+    from agents.common import parse_json
+    crit = []
+    for t in state.get("tickets") or []:
+        crit += [c for c in t.get("criterios", []) if isinstance(c, str)]
+    srcs = []
+    try:
+        for n in ast.parse(qa_tests).body:
+            if isinstance(n, ast.FunctionDef) and n.name in failing:
+                srcs.append(ast.get_source_segment(qa_tests, n) or n.name)
+    except SyntaxError:
+        return []
+    system = ("Eres un revisor de tests. Para cada test que falla decide si es INVALIDO: lo es "
+              "solo si exige algo que el requerimiento y los criterios NO piden (comportamiento "
+              "inventado, tipo de retorno distinto al pedido, formato no mencionado) o usa "
+              "nombres/modulos que el requerimiento no define. Si el test refleja el "
+              "requerimiento, es VALIDO aunque falle (el error es del codigo). Responde SOLO "
+              'JSON: {"invalidos": ["nombre_test", ...], "motivo": "..."}')
+    crit_txt = ("Criterios:\n" + "\n".join(f"- {c}" for c in crit) + "\n") if crit else ""
+    user = (f"Requerimiento: {state.get('requerimiento', '')}\n" + crit_txt
+            + "Tests que fallan:\n" + "\n\n".join(srcs)[:6000]
+            + "\n\nSalida de pytest:\n" + output[-2500:])
+    res = call_agent("qa", system, user, state, fallback=("ollama", "gpt-oss:20b"),
+                     effort="medium", temperature=QA_TEMPERATURE, json_mode=True, use_cache=False)
+    data = parse_json(res.text) or {}
+    return [t for t in data.get("invalidos", []) if t in failing]
 
 
 def _graph_check(state: dict, files: dict) -> list[str]:
@@ -117,16 +183,43 @@ def qa_node(state: dict) -> dict:
           "exit_code": res.exit_code}
     out = {"qa_tests": qa_tests, "sandbox": sb, "alucinaciones": []}
 
+    # 3b. Árbitro: si SOLO fallan tests de QA, ¿son válidos? Los inválidos se descartan
+    failing = only_qa_tests_failed(res.output) if (qa_tests and not res.passed) else []
+    if failing:
+        try:
+            invalid = _arbitrate(state, qa_tests, res.output, failing)
+        except Exception:
+            invalid = []
+        if invalid:
+            qa_tests = drop_tests(qa_tests, invalid)
+            files[QA_TEST_FILE] = qa_tests
+            if "def test_" not in qa_tests:
+                files.pop(QA_TEST_FILE)
+                qa_tests = ""
+            res = sandbox.run_tests(files)
+            sb = {"passed": res.passed, "tests_run": res.tests_run,
+                  "tests_failed": res.tests_failed, "exit_code": res.exit_code,
+                  "tests_qa_descartados": invalid}
+            out = {"qa_tests": qa_tests, "sandbox": sb, "alucinaciones": []}
+
     if not res.passed:
         qa_failed = bool(qa_tests) and re.search(
             rf"(FAILED|ERROR) {re.escape(QA_TEST_FILE)}", res.output) is not None
-        if qa_failed and regen < 1 and state.get("iteracion", 0) >= 2:
-            # Si los tests de QA siguen fallando tras 2 entregas, pueden ser ellos los que
-            # están mal (p. ej. leer ../requirements.txt): se regeneran UNA vez.
+        if qa_failed and regen < MAX_QA_REGEN and (
+                qa_mismatch(res.output) or state.get("iteracion", 0) >= 2):
+            # Los tests de QA pueden ser los que están mal: si fallan por DESAJUSTE con el
+            # código (nombre/firma/módulo inexistente, error de colección) y los tests del
+            # Developer pasan, o si siguen fallando tras 2 entregas, se regeneran contra el
+            # código actual (antes solo una vez y tarde: el KPI 3 falló por esto).
             out.update(qa_tests=None, qa_tests_regen=regen + 1)
         fb = ("VEREDICTO: FAIL\nLos tests fallan en el sandbox Docker "
               f"({res.tests_failed}/{res.tests_run} fallidos, exit={res.exit_code}).\n"
               f"Salida:\n{res.output[-3500:]}")
+        if qa_failed and qa_tests:
+            # El Developer ve los tests de aceptación COMPLETOS (no solo el final de la salida
+            # de pytest) para adaptar el código a lo que se espera exactamente.
+            fb += ("\n\nTests de aceptacion de QA (son la especificacion; NO los modifiques, "
+                   f"adapta el codigo para que pasen):\n```python\n{qa_tests[:6000]}\n```")
         try:
             from memory import vaccine
             v = vaccine.context_for(res.output[-2000:])

@@ -12,6 +12,7 @@ Extiende los comandos de voz del Tool Registry a todo ADES-AI:
   - `voice_loop()`: micrófono si hay, si no lee comandos de texto de stdin.
 """
 import json
+import os
 import re
 import sys
 import unicodedata
@@ -148,7 +149,7 @@ def classify_llm(text: str, model: str = "llama3.2:3b") -> dict:
     """Clasifica con el LLM local (vía la pasarela). Valida la acción devuelta."""
     from core.llm_gateway import chat
     res = chat("voice", _SYSTEM, text, provider="ollama", model=model, use_cache=False,
-               temperature=0.0)
+               temperature=0.0, json_mode=True)
     data = _extract_json(res.text) or {}
     accion = str(data.get("accion", "desconocida")).strip().lower()
     args = data.get("args") if isinstance(data.get("args"), dict) else {}
@@ -233,53 +234,158 @@ def dispatch(cmd: dict) -> list[str]:
     raise ValueError(f"Acción no soportada: {a!r}")
 
 
+# --- Entrada de audio (micrófono) ------------------------------------------------
+# Backend principal: sounddevice (captura) + faster-whisper (transcripción LOCAL en CPU,
+# int8, $0 y sin red tras la primera descarga del modelo). Probado con el micrófono
+# integrado de la webcam ("GENERAL WEBCAM"). Alternativa: speech_recognition + pyaudio.
+
+SAMPLE_RATE = 16000
+WHISPER_MODEL = os.getenv("ADES_WHISPER_MODEL", "small")
+_whisper = None
+
+
 def backend() -> str | None:
-    """Backend de reconocimiento disponible: 'speech_recognition', 'faster_whisper' o None."""
+    """Backend disponible: 'whisper_mic' (sounddevice+faster-whisper), 'speech_recognition',
+    'faster_whisper' (solo archivos) o None."""
     import importlib.util
-    for name in ("speech_recognition", "faster_whisper"):
-        if importlib.util.find_spec(name) is not None:
-            return name
+    has = {n: importlib.util.find_spec(n) is not None
+           for n in ("sounddevice", "faster_whisper", "speech_recognition")}
+    if has["sounddevice"] and has["faster_whisper"]:
+        return "whisper_mic"
+    if has["speech_recognition"]:
+        return "speech_recognition"
+    if has["faster_whisper"]:
+        return "faster_whisper"
     return None
 
 
-INSTALL_HINT = ("No hay reconocimiento de voz instalado. Instala uno de:\n"
-                "  pip install SpeechRecognition pyaudio   (micrófono en vivo)\n"
-                "  pip install faster-whisper              (transcribir archivos de audio, local)\n"
+INSTALL_HINT = ("No hay reconocimiento de voz instalado. Instala:\n"
+                "  pip install faster-whisper sounddevice   (micrófono, transcripción local)\n"
                 "Mientras tanto usa voice_loop() escribiendo los comandos por teclado.")
 
 
-def listen(audio_file: str | None = None, language: str = "es-ES", timeout: float = 8.0) -> str:
+def find_microphone(prefer: str | None = None) -> int | None:
+    """Índice del micrófono. Orden: ADES_MIC_DEVICE (índice o nombre) > webcam > por defecto."""
+    import sounddevice as sd
+    prefer = prefer or os.getenv("ADES_MIC_DEVICE", "")
+    devices = list(enumerate(sd.query_devices()))
+    inputs = [(i, d) for i, d in devices if d["max_input_channels"] > 0]
+    if prefer.isdigit():
+        return int(prefer)
+    if prefer:
+        for i, d in inputs:
+            if prefer.lower() in d["name"].lower():
+                return i
+    for i, d in inputs:  # micrófono de la cámara conectada
+        if "webcam" in d["name"].lower() or "camera" in d["name"].lower():
+            return i
+    default = sd.default.device[0] if isinstance(sd.default.device, (list, tuple)) else None
+    return default if default is not None and default >= 0 else (inputs[0][0] if inputs else None)
+
+
+def _rms(block) -> float:
+    import numpy as np
+    return float(np.sqrt(np.mean(np.square(block)))) if len(block) else 0.0
+
+
+def segment_speech(frames, noise_rms: float, block: int, silence_s: float = 0.9,
+                   factor: float = 3.0, min_threshold: float = 0.012):
+    """Detección de voz por energía (lógica pura, testeable).
+
+    `frames`: iterable de bloques float32. Devuelve el audio desde que la energía supera
+    el umbral (ruido × factor) hasta `silence_s` de silencio, o None si nunca hubo voz.
+    """
+    import numpy as np
+    thr = max(noise_rms * factor, min_threshold)
+    silence_blocks = int(silence_s * SAMPLE_RATE / block)
+    voiced, quiet, started = [], 0, False
+    pre = []  # medio segundo previo para no cortar la primera sílaba
+    for f in frames:
+        loud = _rms(f) > thr
+        if not started:
+            pre = (pre + [f])[-max(1, int(0.5 * SAMPLE_RATE / block)):]
+            if loud:
+                started, voiced = True, list(pre)
+            continue
+        voiced.append(f)
+        quiet = 0 if loud else quiet + 1
+        if quiet >= silence_blocks:
+            break
+    return np.concatenate(voiced) if started else None
+
+
+def record_command(device: int | None = None, max_seconds: float = 10.0,
+                   wait_seconds: float = 8.0, silence_s: float = 0.9) -> "object | None":
+    """Graba una orden del micrófono: calibra el ruido 0.5 s, espera a que hables y corta
+    tras `silence_s` de silencio. Devuelve audio float32 a 16 kHz o None si no hubo voz."""
+    import queue
+
+    import numpy as np
+    import sounddevice as sd
+    device = find_microphone() if device is None else device
+    if device is None:
+        raise VoiceUnavailable("No se encontró ningún micrófono.")
+    block = int(0.05 * SAMPLE_RATE)
+    q: "queue.Queue" = queue.Queue()
+
+    def cb(indata, frames, t, status):  # noqa: ARG001
+        q.put(indata[:, 0].copy())
+
+    try:
+        stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="float32",
+                                blocksize=block, device=device, callback=cb)
+    except Exception as e:  # noqa: BLE001
+        raise VoiceUnavailable(f"No se pudo abrir el micrófono {device}: {e}") from e
+    with stream:
+        noise = [q.get(timeout=5) for _ in range(int(0.5 * SAMPLE_RATE / block))]
+        noise_rms = _rms(np.concatenate(noise))
+        limit = int((wait_seconds + max_seconds) * SAMPLE_RATE / block)
+
+        def frames():
+            for _ in range(limit):
+                yield q.get(timeout=5)
+        return segment_speech(frames(), noise_rms, block, silence_s=silence_s)
+
+
+def _get_whisper():
+    global _whisper
+    if _whisper is None:
+        from faster_whisper import WhisperModel
+        _whisper = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
+    return _whisper
+
+
+def transcribe(audio, language: str = "es") -> str:
+    """Transcribe audio (ruta de archivo o array float32 a 16 kHz) con faster-whisper."""
+    segments, _ = _get_whisper().transcribe(audio, language=language, vad_filter=True,
+                                            beam_size=1)
+    return " ".join(s.text.strip() for s in segments).strip()
+
+
+def listen(audio_file: str | None = None, language: str = "es-ES", timeout: float = 8.0,
+           device: int | None = None) -> str:
     """Captura (micrófono) o transcribe (`audio_file`) una orden de voz y devuelve el texto."""
     b = backend()
     if b is None:
         raise VoiceUnavailable(INSTALL_HINT)
-    if b == "speech_recognition":
-        import speech_recognition as sr
-        r = sr.Recognizer()
+    lang = language.split("-")[0]
+    if b in ("whisper_mic", "faster_whisper"):
         if audio_file:
-            with sr.AudioFile(audio_file) as src:
-                audio = r.record(src)
-        else:
-            try:
-                with sr.Microphone() as src:
-                    r.adjust_for_ambient_noise(src, duration=0.5)
-                    audio = r.listen(src, timeout=timeout)
-            except (AttributeError, OSError) as e:
-                raise VoiceUnavailable(f"Micrófono no disponible ({e}). Instala pyaudio: "
-                                       "pip install pyaudio") from e
-        if hasattr(r, "recognize_whisper"):
-            try:
-                return r.recognize_whisper(audio, language="spanish")
-            except Exception:  # noqa: BLE001  whisper no instalado -> servicio de Google
-                pass
-        return r.recognize_google(audio, language=language)
-    if not audio_file:
-        raise VoiceUnavailable("faster-whisper solo transcribe archivos; para micrófono "
-                               "instala: pip install SpeechRecognition pyaudio")
-    from faster_whisper import WhisperModel
-    model = WhisperModel("small", device="cpu", compute_type="int8")
-    segments, _ = model.transcribe(audio_file, language=language.split("-")[0])
-    return " ".join(s.text.strip() for s in segments).strip()
+            return transcribe(audio_file, lang)
+        if b == "faster_whisper":
+            raise VoiceUnavailable("Para micrófono instala también: pip install sounddevice")
+        audio = record_command(device=device, wait_seconds=timeout)
+        return transcribe(audio, lang) if audio is not None else ""
+    import speech_recognition as sr
+    r = sr.Recognizer()
+    if audio_file:
+        with sr.AudioFile(audio_file) as src:
+            audio = r.record(src)
+    else:
+        with sr.Microphone() as src:
+            r.adjust_for_ambient_noise(src, duration=0.5)
+            audio = r.listen(src, timeout=timeout)
+    return r.recognize_google(audio, language=language)
 
 
 def handle(texto: str, use_llm: bool = True) -> dict:
@@ -299,7 +405,7 @@ def voice_loop(input_fn=None, output=print, use_mic: bool | None = None,
     Termina con "salir"/"adios", EOF o tras `max_commands`. Devuelve los comandos.
     """
     if use_mic is None:
-        use_mic = input_fn is None and backend() == "speech_recognition"
+        use_mic = input_fn is None and backend() in ("whisper_mic", "speech_recognition")
     if input_fn is None:
         if use_mic:
             input_fn = listen
@@ -336,6 +442,16 @@ def main(argv: list[str] | None = None) -> int:
     """`ades voice [texto...]`: traduce una orden; sin texto abre el bucle interactivo."""
     argv = list(sys.argv[1:] if argv is None else argv)
     no_llm = "--no-llm" in argv
+    if "--mic-test" in argv:  # graba una orden y muestra la transcripción
+        print(f"Micrófono: {find_microphone()} · habla ahora...")
+        texto = listen()
+        print(json.dumps({"texto": texto, **(handle(texto, use_llm=not no_llm) if texto else {})},
+                         ensure_ascii=False))
+        return 0
+    if "--texto" in argv:
+        argv.remove("--texto")
+        voice_loop(use_llm=not no_llm, use_mic=False)
+        return 0
     argv = [a for a in argv if a != "--no-llm"]
     if argv:
         print(json.dumps(handle(" ".join(argv), use_llm=not no_llm), ensure_ascii=False))

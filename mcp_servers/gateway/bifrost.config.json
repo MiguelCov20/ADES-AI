@@ -72,6 +72,54 @@
         "concurrency": 8,
         "buffer_size": 64
       }
+    },
+    "vllm": {
+      "keys": [
+        {
+          "name": "llamacpp-gpt-oss-20b",
+          "value": "",
+          "models": [
+            "gpt-oss-20b"
+          ],
+          "weight": 1.0,
+          "vllm_key_config": {
+            "url": "http://host.docker.internal:8081",
+            "model_name": "gpt-oss-20b"
+          }
+        },
+        {
+          "name": "llamacpp-qwen3.8-27b",
+          "value": "",
+          "models": [
+            "qwen3.8-27b"
+          ],
+          "weight": 1.0,
+          "vllm_key_config": {
+            "url": "http://host.docker.internal:8083",
+            "model_name": "qwen3.8-27b"
+          }
+        },
+        {
+          "name": "llamacpp-llama3.2-3b",
+          "value": "",
+          "models": [
+            "llama3.2-3b"
+          ],
+          "weight": 1.0,
+          "vllm_key_config": {
+            "url": "http://host.docker.internal:8082",
+            "model_name": "llama3.2-3b"
+          }
+        }
+      ],
+      "network_config": {
+        "default_request_timeout_in_seconds": 600,
+        "allow_private_network": true
+      },
+      "concurrency_and_buffer_size": {
+        "concurrency": 16,
+        "buffer_size": 256
+      }
     }
   },
   "governance": {
@@ -102,6 +150,18 @@
               "nomic-embed-text:latest",
               "qwen3.8:27b-iq3",
               "qwen3.8:27b-iq3-ctx16k"
+            ],
+            "key_ids": [
+              "*"
+            ],
+            "weight": 1.0
+          },
+          {
+            "provider": "vllm",
+            "allowed_models": [
+              "gpt-oss-20b",
+              "qwen3.8-27b",
+              "llama3.2-3b"
             ],
             "key_ids": [
               "*"

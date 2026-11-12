@@ -59,6 +59,7 @@ def test_opencode_session_estable(monkeypatch):
 
 def test_bifrost_routing_headers(monkeypatch):
     monkeypatch.setenv("ADES_GATEWAY", "bifrost")
+    monkeypatch.setenv("ADES_LOCAL_BACKEND", "ollama")  # llama.cpp: tests/test_local_serving.py
     monkeypatch.setenv("BIFROST_VK_LOCAL", "vk-local")
     monkeypatch.setenv("BIFROST_VK_FACTORY", "vk-factory")
     from agents.llm import get_llm
@@ -230,7 +231,7 @@ def test_gateway_cache_contexto_largo_no_colisiona():
     llm_gateway._mock = None
     import core.llm_gateway as g
     orig = g._invoke
-    g._invoke = lambda p, m, msgs, s, e, t: fake(p, m, msgs)
+    g._invoke = lambda p, m, msgs, *a: fake(p, m, msgs)
     try:
         a = g.chat("dev", "sys", "Escribe un test para budget.status", context=ctx, project=proj,
                    provider="ollama", model="gpt-oss:20b")

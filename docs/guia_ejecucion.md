@@ -1,4 +1,4 @@
-# Guía de ejecución — ADES-AI v1.1
+# Guía de ejecución — ADES-AI v1.2
 
 Guía paso a paso para levantar y usar el ecosistema completo. Complementa a
 `docs/plan_ecosistema_ia.md` (el plan/fuente de verdad) y a `AGENTS.md` (reglas).
@@ -85,6 +85,34 @@ Ollama usa 65536 de contexto por defecto y por el gateway no se puede enviar `nu
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File environment/setup_ollama_ctx.ps1
+```
+
+### 2.4.1 Serving concurrente local: llama.cpp (Windows + AMD) / vLLM (Linux)
+
+- **Linux (ROCm o CUDA): usa vLLM.** Es la mejor opción (PagedAttention, máximo throughput):
+  `python -m automation.model_serving generate` → `environment/vllm/docker-compose.{rocm,cuda}.yml`.
+- **Windows 11 + AMD RX 9070 XT: usa llama.cpp `llama-server`.** vLLM no corre de forma nativa
+  en Windows; `llama-server` ofrece batching continuo y slots paralelos con caché KV unificada
+  sobre ROCm/HIP o Vulkan.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File environment/setup_llamacpp.ps1   # release oficial ggml-org
+```
+
+En `.env`: `ADES_LOCAL_BACKEND=llamacpp` (y `ADES_LLAMACPP_BACKEND=rocm|vulkan`). La pasarela
+arranca bajo demanda un `llama-server` por modelo (8081 gpt-oss, 8082 llama3.2, 8083 qwen3.8),
+reutilizando los GGUF de Ollama, y libera la VRAM de Ollama antes. En Bifrost queda registrado
+como proveedor `vllm`: en Linux basta con apuntar esa entrada a vLLM.
+
+### 2.4.2 Voz (micrófono)
+
+`pip install faster-whisper sounddevice`. Se usa el micrófono de la webcam automáticamente
+(o `ADES_MIC_DEVICE`). Transcripción local con whisper `small` en CPU ($0, sin red tras la
+primera descarga).
+
+```powershell
+ades voice --mic-test     # graba una orden y muestra texto + comando
+ades voice                # bucle por micrófono ("salir" para terminar); --texto para teclado
 ```
 
 ### 2.5 Skills externas (opcional)
@@ -210,6 +238,9 @@ Los resultados se guardan en `.ades/_global/kpis/`.
 | Cognee falla al cognify | falta el plugin APOC | `docker compose up -d --force-recreate graph_memory` (APOC ya configurado) |
 | cognee-mcp no conecta | `cognee-cli serve` conecta a Cloud, no al MCP local | usa Docker: `docker run -d ... cognee/cognee-mcp:main` |
 | Skills de oh-my-opencode desaparecen | `.opencode/vendor/` está gitignored | re-ejecuta `environment/setup_fase4.ps1` |
+| La fábrica va muy lenta con llama.cpp | otro proceso ocupa la GPU (llama-server huérfano, Ollama con otro modelo) y desborda a la RAM | `Get-Process llama-server`, `ollama ps`; detén lo que sobre. Solo cabe un servidor a la vez |
+| gpt-oss mezcla el razonamiento con la respuesta | falta la plantilla harmony (el GGUF de Ollama no la trae) | ya se pasa `environment/llamacpp/templates/gpt-oss.jinja` |
+| El build ROCm no ve la GPU | faltan hipBLAS/rocBLAS | `setup_llamacpp.ps1` las copia de Ollama, o instala el AMD HIP SDK; alternativa: `ADES_LLAMACPP_BACKEND=vulkan` |
 | Error de codificación al imprimir | consola Windows cp1252 | los módulos ya reconfiguren stdout a UTF-8 |
 | La fábrica se queda esperando a Gemini | el cliente de Google no siempre respeta su timeout | ya hay timeout duro (`ADES_LLM_TIMEOUT`, 120 s) + fallback en cascada + circuit breaker |
 | `429 OpenCode Go usage limit reached` | cuota del plan OpenCode Go agotada | la cascada cae a Gemini/local; espera al reinicio de la cuota |

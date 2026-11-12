@@ -17,6 +17,8 @@ Los pasos 1-3 cuestan $0 (KPI 2). Con ADES_SELF_HEAL_CLOUD=0 nunca se escala a n
 El Token Budget Governor puede bloquear los pasos 3-4 (la pasarela cae a local).
 La salida pasa por el validador anti-alucinación (KPI 4) antes de QA.
 """
+import re
+
 from agents.common import call_agent, llm_cfg, memory_context
 from agents.prompts import get_prompt
 from core.sandbox import extract_files
@@ -37,6 +39,18 @@ def strategy_for(iteracion: int) -> dict:
     if os.getenv("ADES_SELF_HEAL_CLOUD", "1") == "0":
         strategies = [s for s in STRATEGIES if not s["model"] or s["model"][0] == "ollama"]
     return strategies[min(iteracion, len(strategies) - 1)]
+
+
+def fix_default_name(files: dict, requerimiento: str) -> dict:
+    """Si el modelo no puso `# FILE:` y el extractor usó `main.py`, pero el requerimiento
+    nombra el módulo (p. ej. `duracion.py`), se usa ese nombre (el KPI 3 falló por esto)."""
+    if set(files) != {"main.py"}:
+        return files
+    named = [n for n in re.findall(r"([\w/-]+\.py)\b", requerimiento)
+             if not n.split("/")[-1].startswith("test_")]
+    if named and named[0] != "main.py":
+        return {named[0]: files["main.py"]}
+    return files
 
 
 def _files_block(files: dict) -> str:
@@ -81,7 +95,7 @@ def developer_node(state: dict) -> dict:
     res = call_agent("developer", get_prompt("developer"), human, state, context=context,
                      provider=provider, model=model, effort=st["effort"],
                      use_cache=not feedback)
-    files = extract_files(res.text) or state.get("files", {})
+    files = fix_default_name(extract_files(res.text), requerimiento) or state.get("files", {})
     estrategias = list(state.get("estrategias", [])) + [
         f"{st['name']}:{res.provider}/{res.model}"]
     return {"codigo": res.text, "files": files, "iteracion": it + 1,

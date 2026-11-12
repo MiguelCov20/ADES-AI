@@ -1,6 +1,6 @@
 # PLAN DE TRABAJO: Ecosistema Completo de IA para Programación (ADES-AI v2.0)
 
-> **Estado:** **v1.1** — Fases 0-10 + Fase 12 (integración, 7 bugs corregidos, 31 features) verificadas con tests y KPIs medidos · **KPI 5 NO cumplido** (requiere vLLM) · **Fecha:** 11 de Noviembre de 2026
+> **Estado:** **v1.2** — Fases 0-10 + Fase 12 verificadas con tests · **KPIs 1-5 cumplidos y medidos** (KPI 5 con llama.cpp `llama-server` en Windows + AMD; en Linux la opción indicada es vLLM) · **Fecha:** 11 de Noviembre de 2026
 > **Proyecto:** ADES-AI (Autonomous Development Ecosystem with Artificial Intelligence)
 > **Este documento es la fuente de verdad del proyecto.** Léelo al inicio de cualquier sesión para retomar el contexto sin repetirlo.
 
@@ -29,7 +29,7 @@
 | `dashboard/` + `ades_cli.py` | ✅ Nuevo | Panel web en vivo y CLI unificado `ades` |
 | `tests/` + `kpis/` | ✅ Nuevo | 230 tests (unitarios + live) y mediciones reproducibles de los KPIs |
 
-**Punto clave:** la v1.0 tenía todos los módulos, pero desconectados entre sí, y ningún KPI estaba medido. La v1.1 los integra, corrige los bugs que impedían alcanzar los KPIs y los mide con datos reales (sección 8). Los KPIs 1-4 se cumplen. El **KPI 5 no**, porque vLLM no puede ejecutarse en Windows + AMD. Pendiente: Fase 11 y la deuda técnica registrada en la Fase 10.
+**Punto clave:** la v1.0 tenía todos los módulos, pero desconectados entre sí, y ningún KPI estaba medido. La v1.1 los integra, corrige los bugs que impedían alcanzar los KPIs y los mide con datos reales (sección 8). Los KPIs 1-4 se cumplen. El KPI 5 se cumple desde la v1.2 con **llama.cpp `llama-server`** (batching continuo, ROCm), la mejor alternativa nativa a vLLM en Windows + AMD: 2.8× el throughput de Ollama. **En Linux, vLLM sigue siendo la mejor opción.** Pendiente: Fase 11 y la deuda técnica registrada en la Fase 10.
 
 ---
 
@@ -85,7 +85,8 @@ Capa 4 — Subagentes         → contexto aislado por tarea (bounded work)
 | Rol | ⭐ Recomendado | Alternativa | Notas |
 |---|---|---|---|
 | **Runtime (1 usuario)** | **Ollama** | LM Studio / llama.cpp | Simple, OpenAI-compatible, carga bajo demanda |
-| **Runtime (producción)** | **vLLM** (PagedAttention) | — | 10-24x más throughput concurrente; para cuando la fábrica tenga muchos agentes |
+| **Runtime (producción, Linux)** | **vLLM** (PagedAttention) | — | **La mejor opción en Linux (ROCm/CUDA)**: 10-24x más throughput concurrente; `environment/vllm/` |
+| **Runtime concurrente (Windows + AMD)** | **llama.cpp `llama-server`** (ROCm/HIP) | Vulkan | vLLM no corre nativo en Windows. Batching continuo + 8 slots + KV unificada; medido 206.2 tok/s agregados con 12 agentes (2.8× Ollama). `core/local_serving.py` |
 | **Código principal** | **gpt-oss:20b** | Qwen3-Coder 30B (MoE, offload) | Mejor coding model que cabe en 16GB (178-190 tok/s) |
 | **General + razonamiento** | **Qwen3.8 27B** (IQ3_S ≈ 13.8GB) | Gemma 4 12B / Devstral Small | Thinking nativo, multimodal, agéntico |
 | **Router/compresor rápido** | **Llama-3.2-3B** | Gemma 4 4B | Clasifica tareas y comprime contexto ($0) |
@@ -275,7 +276,7 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 | Skills | **Obra Superpowers** + skills propias (`AGENTS.md` + `SKILL.md`) |
 | Multi-agente OpenCode | **oh-my-opencode** |
 | Motor fábrica | **LangGraph** |
-| Runtime local | **Ollama** (→ **vLLM** al escalar) |
+| Runtime local | **Ollama** (1 usuario) → **llama.cpp `llama-server`** en Windows + AMD (concurrencia, KPI 5) · **vLLM** en Linux |
 | Coding local | **gpt-oss:20b** (alt: Qwen3.8 27B) |
 | Router/compresor | **Llama-3.2-3B** + **LLMLingua-2** |
 | Embeddings | **nomic-embed-text** |
@@ -381,6 +382,8 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 - [x] Fine-tuning de un SLM (Qwen 3B/8B) vía **Unsloth** — `environment/finetune_unsloth.py` (documentado; requiere NVIDIA/CUDA)
 - [→] (Opcional) Agentes en entorno simulado (Godot/Phaser) — **movido a Fase 11 (v2.0)**
 
+> **Nota v1.2 (KPI 5):** en Windows + AMD RX 9070 XT el serving concurrente usa **llama.cpp `llama-server`** con ROCm (`environment/setup_llamacpp.ps1`, `ADES_LOCAL_BACKEND=llamacpp`). vLLM se mantiene como la opción para Linux; Bifrost registra ambos como proveedor `vllm` (misma entrada, distinta URL).
+
 > **Notas de Fase 9:** (1) vLLM y Unsloth requieren **Linux + NVIDIA/CUDA**; en la máquina de desarrollo (Windows + AMD RX 9070 XT) se sigue usando Ollama vía ROCm, por lo que estos scripts son artefactos documentados para el entorno de despliegue/entrenamiento (nube o host CUDA). (2) OpenHands corre vía Docker y complementa a la fábrica LangGraph (issue externo → PR vs requerimiento interno).
 
 ### FASE 10 — Completar integraciones y deuda técnica pendiente (estado: 100% ✅)
@@ -390,8 +393,16 @@ El **Tool Registry** es la pieza que te permite llegar a tu espacio de trabajo y
 - [x] Acotar `num_ctx` en los nodos de la fábrica — `extra_body={"num_ctx": 8192}` (configurable vía `OLLAMA_NUM_CTX`)
 
 #### Deuda técnica pendiente (registrada en v1.1, 11/11/2026)
-- [ ] **KPI 5 / vLLM**: desplegar y medir `environment/vllm/docker-compose.{rocm,cuda}.yml` en un host Linux (ROCm o CUDA). Nunca se ejecutó: las imágenes, los ids de HF y el reparto de `gpu_memory_utilization` están sin verificar.
-- [ ] **Voz (#28)**: la entrada de audio real (`listen()`) no se probó; no hay `SpeechRecognition` ni `faster-whisper` instalados. Solo funciona la vía de texto.
+- [ ] **vLLM en Linux**: desplegar y medir `environment/vllm/docker-compose.{rocm,cuda}.yml` en un host Linux (ROCm o CUDA). Nunca se ejecutó: las imágenes, los ids de HF y el reparto de `gpu_memory_utilization` están sin verificar. (En Windows + AMD el KPI 5 ya se cumple con llama.cpp.)
+- [ ] **llama.cpp ROCm en Windows**: el build oficial no trae hipBLAS/rocBLAS; se reutilizan las de Ollama (ROCm 7.1, copiadas a `rocm-libs/`). Si Ollama cambia de versión, re-ejecutar `setup_llamacpp.ps1` o instalar el AMD HIP SDK. ROCm desactiva Flash Attention en gfx1201 y avisa de que falta `TensileLibrary_lazy_gfx1201.dat` (hipBLASLt; cae a rocBLAS). La VRAM de gpt-oss + 32k de contexto llega a ~15.3 GB: poco margen si hay otras apps usando la GPU.
+- [ ] **llama.cpp + otros modelos locales**: en 16 GB solo cabe **un** `llama-server` a la vez. Si se pide un modelo pequeño (llama3.2) con gpt-oss cargado, lo atiende gpt-oss (`local_serving.resolve`), aunque las métricas registren el modelo pedido. El router clasifica con el modelo cargado o con heurística. Cambiar a qwen3.8 (estrategia local-alt) para gpt-oss: ~17 s de recarga.
+- [ ] **Cognee con llama.cpp activo**: `memory/cognee_client.py` usa Ollama como LLM; si se usa mientras llama-server tiene gpt-oss cargado, duplica el modelo en la GPU. No está en el camino de la fábrica (herramienta manual).
+- [ ] **QA en la fábrica (v1.2)**: (a) el árbitro descarta tests de aceptación que exigen algo que el requerimiento no pide: si se equivoca, podría aprobar código que no cumple un requisito real (mitigado: solo actúa cuando los tests del Developer pasan, y luego hay revisión LLM). (b) Los requerimientos ambiguos (p. ej. qué formato es "inválido") siguen siendo la principal causa de FAIL. (c) Con esfuerzo alto, gpt-oss a veces agota el tope de 8192 tokens razonando y no entrega archivos; el self-healing pasa entonces a qwen3.8.
+- [x] (resuelto v1.2) **Salida JSON**: llama3.2 en llama.cpp no devolvía el JSON pedido; ahora los clasificadores y el PM usan `json_mode` (JSON forzado por gramática).
+- [x] (resuelto v1.2) **Graphiti** usaba Ollama como LLM y cargaba una 2ª copia de gpt-oss junto a llama-server (12 GB desbordados a RAM): ahora usa el mismo llama-server.
+- [x] (resuelto v1.2) **Plantilla de gpt-oss**: el GGUF que trae Ollama no incluye chat template; sin la plantilla oficial (`environment/llamacpp/templates/gpt-oss.jinja`) el razonamiento se mezclaba con la respuesta y las generaciones no terminaban. Ahora hay además un tope duro por petición (`-n 12288`).
+- [x] (resuelto v1.2) **Procesos huérfanos**: en Windows los `llama-server` hijos sobrevivían a la CLI y retenían VRAM (se vieron 3 a la vez y 4 GB desbordados a la RAM). Ahora se limpian al salir (`atexit`) y se reutiliza un servidor sano ya levantado por otro proceso. Si un proceso muere con `kill -9`, puede quedar uno huérfano: `Get-Process llama-server | Stop-Process`.
+- [ ] **Voz (#28)**: falta la prueba con **voz humana** por el micrófono de la webcam (`ades voice --mic-test`). Ya está probado: el stream real del micrófono, la detección de voz/silencio y la transcripción de audio en español. El detector de voz por energía puede dispararse con ruido (whisper descarta el audio vacío).
 - [ ] **Tareas programadas**: `schedule_nightly()` (#7), `watchdog.install_task()` (#3) y el toast de Windows solo se probaron en dry-run.
 - [ ] **Automejora (#32)**: no se ha ejecutado de punta a punta con el `check_prompt_change` real (los tests inyectan el evaluador).
 - [ ] **Backlog (#2)**: `work_background()` (proceso desacoplado) no se probó con modelos reales; `work()` sí.
@@ -440,6 +451,7 @@ Auditoría del 11/11/2026: los módulos existían pero no estaban conectados y n
   - Todo pasa por Bifrost, con virtual keys `ades-factory` (todo) y `ades-local` (solo Ollama).
   - Las métricas van a SQLite y Langfuse.
 - [x] **31 features** de la sección 6 implementadas; ver allí el estado de cada una (2 quedan parciales).
+- [x] **Tests v1.2** (llama.cpp activo): `python -m pytest -q` → **249 passed, 0 failed**.
 - [x] **Tests**: `python -m pytest -q` → **230 passed, 0 failed** (11/11/2026, unitarios + live con Docker, Ollama, Neo4j, Redis, Langfuse y nube). **KPIs** medidos con `kpis/` (sección 8).
 
 ---
@@ -448,7 +460,7 @@ Auditoría del 11/11/2026: los módulos existían pero no estaban conectados y n
 
 Las 33 features que amplían el plan. Cada una está etiquetada por prioridad (🔴 esencial · 🟡 alto valor · 🟢 opcional) y mapeada a la fase donde se implementa. *(10 🔴 esenciales · 15 🟡 alto valor · 8 🟢 opcionales)*
 
-> **Estado de implementación (v1.1, verificado el 11/11/2026):** ✅ implementada y probada: 31 · ⚠️ parcial: 2 (#28 entrada de audio, #30 vLLM no ejecutado) · ❌ no implementada: 0. "Probada" significa que tiene tests que pasan (unitarios y/o live); las limitaciones de cada una están en su línea y en la Fase 10.
+> **Estado de implementación (v1.2, verificado el 11/11/2026):** ✅ implementada y probada: 32 · ⚠️ pendiente de verificación: 1 (#28: falta la prueba con voz humana por el micrófono) · ❌: 0. "Probada" significa que tiene tests que pasan (unitarios y/o live); las limitaciones de cada una están en su línea y en la Fase 10.
 
 ### A. Autonomía — "Software Factory" avanzada
 1. 🔴 **Project Bootstrapper** — *"Crea un proyecto de X"* → PM + Arquitecto generan estructura, dependencias, CI y README en un comando. *(Fase 3)* → ✅ `agents/bootstrap.py` (`ades bootstrap`): proyecto + PRD/tickets + esqueleto (README, CI, Dockerfile, tests) + git + indexado. Test unitario con PM simulado
@@ -492,11 +504,11 @@ Las 33 features que amplían el plan. Cada una está etiquetada por prioridad (�
 ### H. Interfaz / UX
 26. 🟡 **CLI unificado `ades`** — un solo comando para todo: `ades start`, `ades integrate X`, `ades status`, `ades tokens`. *(Transversal)* → ✅ `ades_cli.py` / `ades.bat`: start, status, tokens, run, bootstrap, backlog, budget, tools, memory, dashboard y más. Tests
 27. 🟡 **Dashboard web de control** — panel para ver agentes, tokens, memoria y herramientas activas. *(Fase 8)* → ✅ `dashboard/app.py` (FastAPI): agentes, tokens, proyectos y backlog, registry, GPU y últimas llamadas. Verificado en navegador
-28. 🟢 **Control por voz** — extiende los comandos de voz del registry a todo el ecosistema. *(Transversal)* → ⚠️ `automation/voice.py`: parser en lenguaje natural (reglas + llama3.2:3b) → comando `ades`, probado en vivo. **La entrada de audio no está probada** (faltan dependencias)
+28. 🟢 **Control por voz** — extiende los comandos de voz del registry a todo el ecosistema. *(Transversal)* → ⚠️ `automation/voice.py`: micrófono de la webcam (autodetectado o `ADES_MIC_DEVICE`) + detección de voz por energía + **faster-whisper local** (CPU int8, $0) → parser → comando `ades` (`ades voice`, `ades voice --mic-test`). Probados: el stream real del micrófono, la transcripción exacta de una orden en español y el despacho. **Pendiente: la prueba con voz humana** (Fase 10)
 
 ### I. Inferencia local
 29. 🟡 **GPU Memory Manager** — carga/descarga modelos según demanda para no quedarte sin VRAM. *(Fase 1)* → ✅ `core/gpu_manager.py`: descarga los modelos grandes antes de cargar otro (regla de 16 GB). Tests; en el KPI 5 nunca hubo 2 modelos grandes a la vez
-30. 🟢 **vLLM multi-model serving** — sirve varios modelos según el tráfico. *(Fase 9)* → ⚠️ `automation/model_serving.py` + `environment/vllm/`: ModelPool multi-backend probado en vivo contra Ollama; compose de vLLM generado. **vLLM nunca se ejecutó** (Windows + AMD)
+30. 🟢 **vLLM multi-model serving** — sirve varios modelos según el tráfico. *(Fase 9)* → ✅ **Windows + AMD: llama.cpp `llama-server`** (`core/local_serving.py`): un servidor por modelo bajo demanda (gpt-oss 8081, llama3.2 8082, qwen3.8 8083), batching continuo + 8 slots + KV unificada, regla de 16 GB, detrás de Bifrost como proveedor `vllm`. Medido: 2.8× el throughput de Ollama. **Linux: vLLM** (`environment/vllm/`, sin ejecutar aquí)
 
 ### J. Automejora / recursividad
 31. 🔴 **Auto-skill Generator** — genera una `SKILL.md` automáticamente de las tareas que repites (inspirado en ECC). *(Fase 4)* → ✅ `automation/skill_generator.py`: agrupa tareas repetidas → SKILL.md en staging → `publish`. Test live
@@ -575,17 +587,18 @@ ADES-AI/
 - **Anti-alucinación:** agente no referencia clases inexistentes (validado contra Graphiti/Neo4j)
 - **Escalabilidad:** fábrica sirve N agentes concurrentes vía vLLM + Bifrost sin saturar GPU
 
-### Resultados medidos (v1.1, 11/11/2026)
+### Resultados medidos (v1.1 y v1.2, 11/11/2026)
+Desde la v1.2 los modelos locales se sirven con **llama.cpp `llama-server`** (ROCm). Los KPIs 1-5 se volvieron a medir con ese backend; las cifras de v1.1 (Ollama) se conservan como referencia.
 Reproducibles con `python -m kpis.<script>`; los JSON quedan en `.ades/_global/kpis/`. Todas las llamadas son reales (Langfuse, Ollama, Docker, Neo4j, Gemini/OpenCode).
 
 | KPI | Resultado | Estado |
 |---|---|---|
-| **1. Ahorro de tokens ≥70% (Langfuse)** | `kpi_tokens`: 6 tareas reales sobre el repo. Tokens leídos de Langfuse: base 100% del código de los paquetes en el prompt, modelo de nube y sin caché; ADES con RepoMap + snippets del grafo, router y caché. **Corrida final: −78.7% de tokens totales y −100% de tokens de pago y de costo**, con calidad del juez 10.0 frente a 9.83. Corrida anterior: −81.5% (9.67 frente a 9.5). | ✅ Cumplido |
+| **1. Ahorro de tokens ≥70% (Langfuse)** | `kpi_tokens`: 6 tareas reales sobre el repo. Tokens leídos de Langfuse: base 100% del código de los paquetes en el prompt, modelo de nube y sin caché; ADES con RepoMap + snippets del grafo, router y caché. **Corrida final: −78.7% de tokens totales y −100% de tokens de pago y de costo**, con calidad del juez 10.0 frente a 9.83. Corrida anterior: −81.5% (9.67 frente a 9.5).  **v1.2 (llama.cpp): −85.6% de tokens totales y −100% de pago y de costo; calidad 9.0 frente a 10.0** (dentro del margen de 1.5). | ✅ Cumplido |
 | **1b. ≥90% en flujos repetitivos** | La misma carga repetida: 6/6 desde el caché semántico, **−100% de tokens**. Es repetición exacta; las paráfrasis solo aciertan si superan una similitud de 0.95. | ✅ Cumplido |
-| **2. Costo local $0 en codificación iterativa** | `kpi_loop`: 3 requerimientos con la fábrica real (`ADES_SELF_HEAL_CLOUD=0`). **Developer + QA: $0.00 en todas las llamadas**. PM, Arquitecto, Reviewer y DevOps (no iterativos) costaron $0.0005-0.001 por run. | ✅ Cumplido |
-| **3. Dev⇄QA en bucle cerrado sin humano** | `kpi_loop` final: **3/3 runs en estado ok con todos los tests en verde en el sandbox Docker** (14, 11 y 35 tests); 1 run se corrigió solo en la iteración 3. Antes de los arreglos de esta fase, 1 de 3 había fallado (test de QA mal escrito y mensajes de Pydantic v1). Muestra pequeña (3). | ✅ Cumplido |
-| **4. Sin clases inexistentes (validado contra Neo4j)** | `kpi_halluc`: 8 tareas que obligan a usar APIs internas. **8/8 entregas finales sin referencias inexistentes**, verificado además de forma independiente importando los módulos reales y usando `hasattr`. Sin mapa del repo, el mismo modelo alucinó en 4/8 tareas. | ✅ Cumplido |
-| **5. N agentes concurrentes vía vLLM + Bifrost sin saturar GPU** | `kpi_scale`: 12 agentes simultáneos (8 locales gpt-oss:20b + 4 de nube) **a través de Bifrost**: 12/12 correctos, VRAM máx. 12.75/16 GB, sin offload a CPU y nunca 2 modelos grandes a la vez. **Pero vLLM no puede ejecutarse en Windows + AMD RX 9070 XT**: la prueba usa Ollama como backend. | ❌ **No cumplido** tal como está redactado (falta vLLM; ver Fase 10) |
+| **2. Costo local $0 en codificación iterativa** | `kpi_loop`: 3 requerimientos con la fábrica real (`ADES_SELF_HEAL_CLOUD=0`). **Developer + QA: $0.00 en todas las llamadas**. PM, Arquitecto, Reviewer y DevOps (no iterativos) costaron $0.0005-0.001 por run.  **v1.2 (llama.cpp): 6/6 runs con Developer + QA a $0.00.** | ✅ Cumplido |
+| **3. Dev⇄QA en bucle cerrado sin humano** | `kpi_loop` final: **3/3 runs en estado ok con todos los tests en verde en el sandbox Docker** (14, 11 y 35 tests); 1 run se corrigió solo en la iteración 3. Antes de los arreglos de esta fase, 1 de 3 había fallado (test de QA mal escrito y mensajes de Pydantic v1). Muestra pequeña (3).  **v1.2 (llama.cpp), código final: 6/6 runs ok con tests en verde en el sandbox (2 rondas de 3); 1 se corrigió en la iteración 2, con el árbitro de QA descartando un test que exigía casos "inválidos" no definidos en el requerimiento.** Antes de los arreglos de v1.2 (plantilla, árbitro, nombres de módulo, tests de QA completos en el feedback), con llama.cpp salió 0/3 y 2/3. | ✅ Cumplido (muestra de 6) |
+| **4. Sin clases inexistentes (validado contra Neo4j)** | `kpi_halluc`: 8 tareas que obligan a usar APIs internas. **8/8 entregas finales sin referencias inexistentes**, verificado además de forma independiente importando los módulos reales y usando `hasattr`. Sin mapa del repo, el mismo modelo alucinó en 4/8 tareas.  **v1.2 (llama.cpp): 8/8 sin referencias inexistentes**; sin mapa, 3/8 alucinaron. | ✅ Cumplido |
+| **5. N agentes concurrentes sin saturar GPU** (plan: "vía vLLM + Bifrost") | `kpi_scale` (v1.2): 12 agentes simultáneos con gpt-oss:20b **vía Bifrost** y la misma carga (máx. 384 tokens) en los tres backends. **llama.cpp ROCm (configuración final): 12/12 OK, 206.2 tok/s agregados (2.8× Ollama), p50 13.0 s / p95 17.2 s, VRAM pico 15.3/16 GB, modelo entero en GPU (14.0 GB del proceso vs 13.8 GB de pesos), 8 slots procesando a la vez.** Vulkan (medición previa): 184.4 tok/s (2.7×). Ollama: 74.7 tok/s, p95 49.3 s. La medición exige GPU libre al empezar. vLLM no corre nativo en Windows + AMD; **en Linux, vLLM es la opción recomendada** (`environment/vllm/`, sin ejecutar en esta máquina). | ✅ Cumplido con llama.cpp `llama-server` (la mejor alternativa en Windows + AMD) |
 
 ---
 

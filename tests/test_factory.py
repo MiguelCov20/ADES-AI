@@ -256,3 +256,61 @@ def test_cli_todos_los_subcomandos_tienen_destino():
     import ades_cli
     for cmd, (mod, fn) in ades_cli.PASSTHROUGH.items():
         assert callable(getattr(importlib.import_module(mod), fn, None)), cmd
+
+
+def test_qa_regenera_tests_por_desajuste():
+    from agents.qa import qa_mismatch
+    out_desajuste = ("FAILED test_qa_acceptance.py::test_x - TypeError: f() takes 1 positional\n"
+                     "1 failed, 9 passed")
+    assert qa_mismatch(out_desajuste)
+    assert qa_mismatch("ERROR test_qa_acceptance.py\nImportError while importing\nInterrupted: 1 error")
+    # Si también fallan los tests del Developer, la culpa es del código: no se regenera
+    assert not qa_mismatch("FAILED test_app.py::t - TypeError\nFAILED test_qa_acceptance.py::t - TypeError")
+    # Fallo de comportamiento (assert) en QA: no es desajuste
+    assert not qa_mismatch("FAILED test_qa_acceptance.py::t - AssertionError: 3 != 4")
+
+
+def test_nombre_de_modulo_desde_el_requerimiento():
+    from agents.developer import fix_default_name
+    req = "Funcion `parse_duracion(texto)` en `duracion.py` que convierte"
+    assert fix_default_name({"main.py": "def f(): pass"}, req) == {"duracion.py": "def f(): pass"}
+    assert fix_default_name({"a.py": "x", "test_a.py": "y"}, req) == {"a.py": "x", "test_a.py": "y"}
+    assert fix_default_name({"main.py": "x"}, "sin nombres") == {"main.py": "x"}
+
+
+def test_arbitro_descarta_tests_de_qa_invalidos():
+    from agents.qa import drop_tests, only_qa_tests_failed
+    out = ("FAILED test_qa_acceptance.py::test_espacios - ValueError\n"
+           "FAILED test_qa_acceptance.py::test_retorno - AssertionError\n2 failed, 9 passed")
+    assert only_qa_tests_failed(out) == ["test_espacios", "test_retorno"]
+    assert only_qa_tests_failed("FAILED test_app.py::t - x\nFAILED test_qa_acceptance.py::u") == []
+    code = "def test_ok():\n    assert 1\n\ndef test_espacios():\n    assert 0\n"
+    pruned = drop_tests(code, ["test_espacios"])
+    assert "test_ok" in pruned and "test_espacios" not in pruned
+
+
+@pytest.mark.live
+def test_arbitro_en_el_bucle(mock_llm):
+    """Tests del Developer en verde + un test de QA que inventa un requisito -> el árbitro lo
+    descarta y la entrega pasa sin culpar al código."""
+    import json as _json
+    from agents.orquestador import run
+
+    def fn(provider, model, messages):
+        system = messages[0].content
+        if "Project Manager" in system:
+            return (_json.dumps({"prd": "suma", "tickets": [{"titulo": "suma", "criterios": []}]}), 5, 5)
+        if system.startswith("Eres el Developer"):
+            return (GOOD, 50, 50)
+        if "pytest de ACEPTACION" in system:
+            return ("```python\nfrom calc import suma\n\ndef test_basico():\n    assert suma(2, 3) == 5\n\n"
+                    "def test_inventado():\n    assert suma('1', 2) == 3\n```", 5, 5)
+        if "revisor de tests" in system:
+            return ('{"invalidos": ["test_inventado"], "motivo": "pide sumar strings"}', 5, 5)
+        if "QA Tester" in system:
+            return ("VEREDICTO: PASS\nCumple.", 5, 5)
+        return ("ok", 5, 5)
+    mock_llm(fn)
+    r = run("Funcion suma(a,b)", project="ades-ai", write=False, nodes={"contexto": lambda s: {}})
+    assert r["estado"] == "ok" and r["iteracion"] == 1
+    assert r["sandbox"]["tests_qa_descartados"] == ["test_inventado"]

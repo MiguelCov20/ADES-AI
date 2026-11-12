@@ -77,6 +77,25 @@ def ensure_fits(model: str) -> list[str]:
         return victims
 
 
+def vram_windows() -> dict:
+    """VRAM dedicada real de la GPU según los contadores de Windows (cualquier proceso:
+    Ollama, llama-server, juegos...). {"used_gb", "por_pid": {pid: gb}}. Solo Windows."""
+    import subprocess
+    ps = ("$a=(Get-Counter '\\GPU Adapter Memory(*)\\Dedicated Usage').CounterSamples|"
+          "sort CookedValue -desc|select -First 1;"
+          "$p=(Get-Counter '\\GPU Process Memory(*)\\Dedicated Usage').CounterSamples|"
+          "?{$_.CookedValue -gt 50MB}|%{@{i=$_.InstanceName;v=$_.CookedValue}};"
+          "@{used=$a.CookedValue;procs=@($p)}|ConvertTo-Json -Compress -Depth 3")
+    out = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True,
+                         text=True, timeout=30).stdout
+    data = json.loads(out)
+    por_pid = {}
+    for p in data.get("procs") or []:
+        pid = p["i"].split("_")[1]
+        por_pid[pid] = round(por_pid.get(pid, 0) + p["v"] / 1e9, 2)
+    return {"used_gb": round(data["used"] / 1e9, 2), "por_pid": por_pid}
+
+
 def status() -> dict:
     loaded = loaded_models()
     return {"vram_gb": VRAM_GB, "loaded": loaded,

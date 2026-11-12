@@ -16,13 +16,13 @@ def llm_cfg(agent_id: str, fallback: tuple[str, str]) -> tuple[str, str]:
 
 def call_agent(agent_id: str, system: str, user: str, state: dict, *, context: str = "",
                fallback=("ollama", "gpt-oss:20b"), provider=None, model=None, effort=None,
-               use_cache: bool = True):
+               use_cache: bool = True, json_mode: bool = False, temperature: float = 0.2):
     p, m = (provider, model) if provider else llm_cfg(agent_id, fallback)
     if m == "auto":
         m = None
     return chat(agent_id, system, user, context=context, project=state.get("project"),
                 run_id=state.get("run_id"), provider=p, model=m, effort=effort,
-                use_cache=use_cache)
+                use_cache=use_cache, json_mode=json_mode, temperature=temperature)
 
 
 def parse_json(text: str):

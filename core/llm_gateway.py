@@ -86,20 +86,28 @@ def estimate_tokens(text: str) -> int:
 
 
 def _invoke(provider: str, model: str, messages: list, session_id: str, effort: str,
-            temperature: float):
+            temperature: float, max_tokens: int | None = None, json_mode: bool = False):
     if _mock is not None:
         return _mock(provider, model, messages)
     from agents.llm import get_llm
+    from langchain_openai import ChatOpenAI
     llm = get_llm(provider, model, temperature=temperature, session_id=session_id,
                   effort=effort)
+    kw = {}
+    if max_tokens:
+        kw = {"max_tokens": max_tokens} if isinstance(llm, ChatOpenAI) else {
+            "max_output_tokens": max_tokens}
+    if json_mode and isinstance(llm, ChatOpenAI):
+        # Salida JSON forzada por gramática (llama-server / Ollama / OpenAI-compatibles)
+        kw["response_format"] = {"type": "json_object"}
     if provider == "ollama":
-        resp = llm.invoke(messages)
+        resp = llm.invoke(messages, **kw)
     else:
         # Timeout DURO para la nube: el timeout del cliente de Gemini no siempre se
         # respeta (se observó una llamada colgada >6 min). Si vence, se pasa al
         # siguiente modelo de la cascada; el hilo huérfano se abandona.
         ex = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        fut = ex.submit(llm.invoke, messages)
+        fut = ex.submit(lambda: llm.invoke(messages, **kw))
         try:
             resp = fut.result(timeout=LLM_TIMEOUT)
         except concurrent.futures.TimeoutError:
@@ -118,7 +126,8 @@ def chat(agent: str, system: str, user: str, *, context: str = "",
          project: str | None = None, run_id: str | None = None,
          provider: str | None = None, model: str | None = None,
          effort: str | None = None, use_cache: bool = True, temperature: float = 0.2,
-         route: bool = False) -> LLMResult:
+         route: bool = False, max_tokens: int | None = None,
+         json_mode: bool = False) -> LLMResult:
     """Llama al modelo adecuado para `agent` con todas las optimizaciones.
 
     Si `route=True` o no se da provider, el Brain Selector decide modelo/effort.
@@ -177,10 +186,19 @@ def chat(agent: str, system: str, user: str, *, context: str = "",
             continue
         if prov == "ollama" and _mock is None:
             from agents.llm import gateway_enabled, ollama_variant
-            gpu_manager.ensure_fits(ollama_variant(mod) if gateway_enabled() else mod)
+            from core import local_serving
+            if local_serving.enabled() and local_serving.config_for(mod):
+                try:
+                    local_serving.ensure(mod)  # llama-server con batching continuo (KPI 5)
+                except Exception as e:  # noqa: BLE001
+                    errors.append(f"llama-server:{mod} -> {type(e).__name__}: {e}"[:200])
+                    continue
+            else:
+                gpu_manager.ensure_fits(ollama_variant(mod) if gateway_enabled() else mod)
         t0 = time.time()
         try:
-            text, tin, tout = _invoke(prov, mod, messages, run_id, effort or "", temperature)
+            text, tin, tout = _invoke(prov, mod, messages, run_id, effort or "", temperature,
+                                      max_tokens, json_mode)
         except Exception as e:  # noqa: BLE001
             err = f"{type(e).__name__}: {str(e)[:200]}"
             errors.append(f"{prov}:{mod} -> {err}")

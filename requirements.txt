@@ -32,3 +32,7 @@ uvicorn
 PyYAML
 mcp
 pytest
+
+# v1.2 - Voz por micrófono (feature #28)
+faster-whisper
+sounddevice
