@@ -33,7 +33,12 @@ from pathlib import Path
 from core.config import OLLAMA_URL, ROOT, global_state_dir
 
 BUILD = os.getenv("ADES_LLAMACPP_BUILD", "b12292")
+# Binarios y modelos fuera del repo (por defecto en F:\IA, configurable en .env):
+#   ADES_LLAMACPP_DIR -> carpeta del build (rocm/, vulkan/, rocm-libs/)
+#   ADES_GGUF_DIR     -> GGUF con nombre legible (enlaces duros a los blobs de Ollama +
+#                        modelos descargados directamente, p. ej. Qwen3.6)
 RUNTIME = Path(os.getenv("ADES_LLAMACPP_DIR", ROOT / ".ades" / "runtime" / "llamacpp" / BUILD))
+GGUF_DIR = Path(os.getenv("ADES_GGUF_DIR", ROOT / ".ades" / "models"))
 BACKEND = os.getenv("ADES_LLAMACPP_BACKEND", "rocm")
 HOST = "127.0.0.1"
 TEMPLATES = ROOT / "environment" / "llamacpp" / "templates"
@@ -51,11 +56,21 @@ MODELS: dict[str, dict] = {
                     "template_kwargs": {"reasoning_effort": "medium"},
                     # Muestreo recomendado por OpenAI para gpt-oss (temp 1.0, top_p 1.0): con
                     # temperatura baja entraba en bucles de >10k tokens en llama.cpp.
-                    "sampling": {"temperature": 1.0, "top_p": 1.0}},
+                    "sampling": {"temperature": 1.0, "top_p": 1.0}, "gguf": "gpt-oss-20b.gguf"},
     "qwen3.8:27b-iq3": {"alias": "qwen3.8-27b", "port": 8083, "parallel": 2,
-                        "ctx_total": 8192, "big": True},
+                        "ctx_total": 8192, "big": True, "gguf": "qwen3.8-27b-iq3.gguf"},
     "llama3.2:3b": {"alias": "llama3.2-3b", "port": 8082, "parallel": 4, "ctx_total": 16384,
-                    "big": False},
+                    "big": False, "gguf": "llama3.2-3b.gguf"},
+    # Qwen3.6-35B-A3B (MoE: 256 expertos, 8 activos, 40 capas). Q4_K_M = 21.2 GB > 16 GB de
+    # VRAM: los expertos de `n_cpu_moe` capas se quedan en RAM (solo ~3B activos por token).
+    "qwen3.6:35b-a3b": {"alias": "qwen3.6-35b-a3b", "port": 8084, "parallel": 2,
+                        "ctx_total": 16384, "big": True,
+                        "gguf": "Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
+                        # Medido en RX 9070 XT + DDR4-2666: 18 capas en CPU -> 14.9 GB VRAM y
+                        # 28.6 tok/s; 16 -> 15.9 GB (al límite) y 31.7 tok/s. `--load-mode none`
+                        # evita mmap (con expertos en CPU, mmap daba 5.7 tok/s en frío).
+                        "extra_args": ["--n-cpu-moe", os.getenv("ADES_QWEN36_CPU_MOE", "18"),
+                                       "--load-mode", "none"]},
 }
 
 _LOCK = threading.Lock()
@@ -95,7 +110,11 @@ def server_exe(backend: str | None = None) -> Path:
 
 
 def gguf_path(model: str) -> str:
-    """Ruta del GGUF que Ollama ya tiene descargado (`ollama show --modelfile`)."""
+    """Ruta del GGUF: primero `ADES_GGUF_DIR/<gguf>` (F:\IA\gguf); si no está, el blob
+    que Ollama ya tiene descargado (`ollama show --modelfile`)."""
+    cfg = config_for(model) or {}
+    if cfg.get("gguf") and (GGUF_DIR / cfg["gguf"]).exists():
+        return str(GGUF_DIR / cfg["gguf"])
     cache = global_state_dir() / "gguf_paths.json"
     data = json.loads(cache.read_text(encoding="utf-8")) if cache.exists() else {}
     m = base_model(model)
@@ -127,7 +146,7 @@ def build_args(model: str, backend: str | None = None, parallel: int | None = No
             "--kv-unified",             # caché KV compartida entre slots
             "-fa", "on", "--jinja", "--metrics", "--no-webui",
             "-n", str(MAX_PREDICT),     # tope duro de tokens por petición (anti-desbordes)
-            *_template_args(cfg)]
+            *_template_args(cfg), *cfg.get("extra_args", [])]
 
 
 def _template_args(cfg: dict) -> list[str]:

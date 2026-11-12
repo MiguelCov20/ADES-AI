@@ -107,3 +107,16 @@ def test_muestreo_recomendado_gpt_oss(monkeypatch):
     monkeypatch.setenv("ADES_GATEWAY", "direct")
     from agents.llm import get_llm
     assert get_llm("ollama", "gpt-oss:20b", temperature=0.2).temperature == 1.0
+
+
+def test_gguf_desde_directorio_configurado(tmp_path, monkeypatch):
+    (tmp_path / "gpt-oss-20b.gguf").write_bytes(b"GGUF")
+    monkeypatch.setattr(ls, "GGUF_DIR", tmp_path)
+    assert ls.gguf_path("gpt-oss:20b") == str(tmp_path / "gpt-oss-20b.gguf")
+
+
+def test_qwen36_moe_con_expertos_en_cpu(monkeypatch):
+    monkeypatch.setattr(ls, "gguf_path", lambda m: "F:/IA/gguf/qwen36.gguf")
+    a = ls.build_args("qwen3.6:35b-a3b")
+    assert "--n-cpu-moe" in a and "--load-mode" in a
+    assert a[a.index("--alias") + 1] == "qwen3.6-35b-a3b" and "8084" in a

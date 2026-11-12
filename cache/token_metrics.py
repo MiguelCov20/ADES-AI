@@ -16,6 +16,7 @@ COST_PER_1M = {
     "deepseek-v4.1-flash": {"input": 0.10, "output": 0.40},
     "gpt-oss:20b": {"input": 0.0, "output": 0.0},
     "qwen3.8:27b-iq3": {"input": 0.0, "output": 0.0},
+    "qwen3.6:35b-a3b": {"input": 0.0, "output": 0.0},
     "llama3.2:3b": {"input": 0.0, "output": 0.0},
 }
 

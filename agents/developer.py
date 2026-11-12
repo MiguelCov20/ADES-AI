@@ -8,7 +8,8 @@ distinta en vez de repetir lo mismo:
   1. base       -> modelo del roster (gpt-oss:20b local, $0), effort medio
   2. contexto   -> mismo modelo, effort alto + salida completa del sandbox,
                    vacunas de bugs parecidos y archivos previos completos
-  3. local-alt  -> otro modelo LOCAL (qwen3.8:27b, $0) con todo el contexto
+  3. local-alt  -> otro modelo LOCAL (Qwen3.6-35B-A3B MoE vía llama.cpp, $0) con todo el contexto.
+                   Sustituyó a qwen3.8:27b (benchmark: 7/7 frente a 3/7, 1.7× más rápido).
   4. modelo     -> escala a nube barata (deepseek-v4.1-flash)
   5. pesado     -> deepseek-v4-pro (effort alto)
 
@@ -26,7 +27,7 @@ from core.sandbox import extract_files
 STRATEGIES = [
     {"name": "base", "effort": "medium", "model": None},
     {"name": "contexto", "effort": "high", "model": None},
-    {"name": "local-alt", "effort": "high", "model": ("ollama", "qwen3.8:27b-iq3")},
+    {"name": "local-alt", "effort": "high", "model": ("ollama", "qwen3.6:35b-a3b")},
     {"name": "modelo", "effort": "medium", "model": ("opencode", "deepseek-v4.1-flash")},
     {"name": "pesado", "effort": "high", "model": ("opencode", "deepseek-v4-pro")},
 ]

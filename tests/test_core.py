@@ -26,7 +26,7 @@ def test_qa_parser_primera_linea(text, expected):
     ("Project Manager", "gemini", "auto"),
     ("Arquitecto de software", "gemini", "auto"),
     ("Developer backend FastAPI", "ollama", "gpt-oss:20b"),
-    ("Agente UX/UI", "ollama", "qwen3.8:27b-iq3"),
+    ("Agente UX/UI", "ollama", "qwen3.6:35b-a3b"),
     ("Revisor de seguridad", "opencode", "deepseek-v4-pro"),
     ("Explorador de codigo", "ollama", "llama3.2:3b"),
 ])

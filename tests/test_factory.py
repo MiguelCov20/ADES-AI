@@ -73,7 +73,7 @@ def test_estrategias_self_healing():
     from agents.developer import strategy_for
     names = [strategy_for(i)["name"] for i in range(6)]
     assert names == ["base", "contexto", "local-alt", "modelo", "pesado", "pesado"]
-    assert strategy_for(2)["model"] == ("ollama", "qwen3.8:27b-iq3")
+    assert strategy_for(2)["model"] == ("ollama", "qwen3.6:35b-a3b")
     assert strategy_for(3)["model"][0] == "opencode"
 
 

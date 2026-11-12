@@ -99,8 +99,16 @@ powershell -ExecutionPolicy Bypass -File environment/setup_ollama_ctx.ps1
 powershell -ExecutionPolicy Bypass -File environment/setup_llamacpp.ps1   # release oficial ggml-org
 ```
 
-En `.env`: `ADES_LOCAL_BACKEND=llamacpp` (y `ADES_LLAMACPP_BACKEND=rocm|vulkan`). La pasarela
-arranca bajo demanda un `llama-server` por modelo (8081 gpt-oss, 8082 llama3.2, 8083 qwen3.8),
+En `.env`: `ADES_LOCAL_BACKEND=llamacpp` (y `ADES_LLAMACPP_BACKEND=rocm|vulkan`), `ADES_LLAMACPP_DIR=F:/IA/llamacpp/b12292` y `ADES_GGUF_DIR=F:/IA/gguf`.
+
+**Dónde están los modelos (desde el 12/11/2026):** todo en `F:\IA`:
+- `ollama\models`: modelos de Ollama (variable de usuario `OLLAMA_MODELS`).
+- `gguf\`: GGUF con nombre legible para llama.cpp. Son enlaces duros a los blobs de Ollama (no ocupan espacio extra), más Qwen3.6-35B-A3B.
+- `llamacpp\`: binarios ROCm/Vulkan.
+- `huggingface\`: modelo de voz de whisper (variable `HF_HOME`).
+
+Si borras un modelo de Ollama, borra también su enlace en `gguf\`; si no, el espacio no se libera. La pasarela
+arranca bajo demanda un `llama-server` por modelo (8081 gpt-oss, 8082 llama3.2, 8083 qwen3.8, 8084 Qwen3.6-35B-A3B),
 reutilizando los GGUF de Ollama, y libera la VRAM de Ollama antes. En Bifrost queda registrado
 como proveedor `vllm`: en Linux basta con apuntar esa entrada a vLLM.
 

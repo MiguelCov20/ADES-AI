@@ -18,7 +18,7 @@ from agents import roster
 # Heurística de asignación de LLM óptimo (nube vs local) según el rol.
 # Alineada con el roster del plan (sección 3.5): PM/Arquitecto -> Gemini,
 # Reviewer/Seguridad -> deepseek-v4-pro, DevOps -> deepseek-v4.1-flash,
-# Frontend/UX -> qwen3.8 local, exploración/clasificación -> llama3.2:3b,
+# Frontend/UX -> Qwen3.6-35B-A3B local (sustituye a qwen3.8), exploración/clasificación -> llama3.2:3b,
 # resto (backend/código) -> gpt-oss:20b local ($0).
 # Se compara por PALABRAS (prefijos), no por subcadenas: antes "docker"
 # contenía "doc" y un DevOps acababa en llama3.2:3b.
@@ -29,7 +29,7 @@ ROLE_LLM_MAP = [
     (("devops", "docker", "despliegue", "deploy", "ci", "cd", "kubernetes", "infra"),
      "opencode", "deepseek-v4.1-flash"),
     (("frontend", "react", "next", "interfaces", "interfaz", "ux", "ui", "experiencia",
-      "visual", "diseñ", "disen", "css"), "ollama", "qwen3.8:27b-iq3"),
+      "visual", "diseñ", "disen", "css"), "ollama", "qwen3.6:35b-a3b"),
     (("explor", "clasif", "router", "resum", "documenta", "busqueda", "búsqueda"),
      "ollama", "llama3.2:3b"),
 ]
