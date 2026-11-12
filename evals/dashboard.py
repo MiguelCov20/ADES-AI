@@ -1,36 +1,51 @@
 """Dashboard de costo en tokens por agente (ADES-AI, Fase 8).
 
-Agrega las métricas de `cache/token_metrics.py` (Fase 7) y produce un reporte
-legible por agente/tarea.
+Lee datos REALES de `core.metrics_store.summary()` (SQLite en `.ades/_global/metrics.db`,
+alimentado por cada llamada de `core.llm_gateway.chat`) y, si existe, el último
+resultado del benchmark harness (#17).
+
+Uso:
+    python -m evals.dashboard [--project ades-ai] [--run RUN_ID]
 """
-from cache.token_metrics import TokenMetrics
+from core import metrics_store
 
 
-def render(metrics: TokenMetrics) -> str:
-    r = metrics.report()
+def render(summary: dict, title: str = "todos los proyectos", benchmark: dict | None = None) -> str:
+    s = summary
     lines = [
-        "=== Dashboard de costo por agente ===",
-        f"  llamadas totales : {r['calls']}",
-        f"  hits de cache    : {r['cache_hits']}  (hit-rate {r['hit_rate']})",
-        f"  tokens in/out    : {r['input_tokens']} / {r['output_tokens']}",
-        f"  costo total      : ${r['total_cost']:.6f}",
-        "",
-        "  Por tarea:",
+        f"=== Dashboard de costo por agente ({title}) ===",
+        f"  llamadas totales : {s['calls']}  (errores {s['errors']})",
+        f"  hits de cache    : {s['cache_hits']}  (hit-rate {s['hit_rate']:.1%})",
+        f"  tokens in/out    : {s['tokens_in']} / {s['tokens_out']}",
+        f"  tokens locales   : {s['local_tokens']}  ($0)",
+        f"  costo total      : ${s['cost']:.6f}",
     ]
-    for task, t in sorted(r["by_task"].items()):
-        lines.append(f"    {task:20s} {t['calls']} llamadas | "
-                     f"{t['tokens']} tokens | ${t['cost']:.6f}")
+    if not s["calls"]:
+        lines.append("  (sin llamadas registradas todavía)")
+    else:
+        lines += ["", "  Por agente / modelo:"]
+        for r in s["by_agent"]:
+            lines.append(f"    {str(r['agent']):12s} {str(r['model']):28s} {r['calls']:5d} llamadas | "
+                         f"{r['hits'] or 0} hits | {r['tokens'] or 0} tokens | ${r['cost'] or 0:.6f}")
+    if benchmark:
+        lines += ["", f"  Último benchmark [{benchmark.get('label')}] {benchmark.get('timestamp')}: "
+                      f"pass@1 {benchmark['pass@1']:.2f} ({benchmark['passed']}/{benchmark['total']}) "
+                      f"| ${benchmark['cost']:.6f}"]
     return "\n".join(lines)
 
 
-def main() -> int:
-    m = TokenMetrics()
-    # Ejemplo de uso (sin llamadas reales): se documenta cómo se alimenta.
-    print("El dashboard se alimenta con TokenMetrics.record(...).")
-    print("Ejemplo:")
-    m.record("developer", "gpt-oss:20b", 500, 200)
-    m.record("reviewer", "deepseek-v4-pro", 300, 150, cache_hit=True)
-    print(render(m))
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    from evals.benchmark import latest_results
+
+    ap = argparse.ArgumentParser(description="Dashboard de costo por agente")
+    ap.add_argument("--project")
+    ap.add_argument("--run")
+    a = ap.parse_args(argv)
+    s = metrics_store.summary(project=a.project, run_id=a.run)
+    title = f"proyecto {a.project}" if a.project else "todos los proyectos"
+    print(render(s, title, latest_results()))
     return 0
 
 

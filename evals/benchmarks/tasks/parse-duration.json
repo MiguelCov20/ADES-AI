@@ -1,0 +1,12 @@
+{
+  "id": "parse-duration",
+  "title": "Parser de duraciones",
+  "difficulty": "media",
+  "prompt": "Crea el archivo `duration.py` con `parse_duration(text: str) -> int` que convierte duraciones como '1h30m', '45s', '2d', '1h 5m 10s', '90m' a segundos enteros. Unidades: d (86400), h (3600), m (60), s (1); sin distinguir mayúsculas; se permiten espacios entre componentes; cada unidad aparece como máximo una vez y en orden d, h, m, s. Cadena vacía, unidades desconocidas, números sin unidad, unidades repetidas o desordenadas -> ValueError.",
+  "hidden_tests": {
+    "test_hidden_duration.py": "import pytest\nfrom duration import parse_duration\n\n\n@pytest.mark.parametrize(\"text,secs\", [(\"45s\", 45), (\"90m\", 5400), (\"1h30m\", 5400),\n                                       (\"2d\", 172800), (\"1h 5m 10s\", 3910),\n                                       (\"1D2H\", 93600), (\"0s\", 0)])\ndef test_validos(text, secs):\n    assert parse_duration(text) == secs\n\n\n@pytest.mark.parametrize(\"bad\", [\"\", \"10\", \"5x\", \"1m1h\", \"1h1h\", \"h\", \"-5m\", \"1.5h\"])\ndef test_invalidos(bad):\n    with pytest.raises(ValueError):\n        parse_duration(bad)\n"
+  },
+  "reference": {
+    "duration.py": "import re\n\n_RE = re.compile(r\"^\\s*(?:(\\d+)d)?\\s*(?:(\\d+)h)?\\s*(?:(\\d+)m)?\\s*(?:(\\d+)s)?\\s*$\", re.I)\n\n\ndef parse_duration(text):\n    if not isinstance(text, str) or not text.strip():\n        raise ValueError(\"vacio\")\n    m = _RE.match(text)\n    if not m or not any(m.groups()):\n        raise ValueError(\"formato invalido\")\n    d, h, mi, s = (int(g) if g else 0 for g in m.groups())\n    return d * 86400 + h * 3600 + mi * 60 + s\n"
+  }
+}

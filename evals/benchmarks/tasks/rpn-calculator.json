@@ -1,0 +1,12 @@
+{
+  "id": "rpn-calculator",
+  "title": "Calculadora RPN",
+  "difficulty": "media",
+  "prompt": "Crea el archivo `rpn.py` con `eval_rpn(expr: str) -> float` que evalúa una expresión en notación polaca inversa con tokens separados por espacios: números (enteros o decimales, también negativos como '-3') y operadores + - * / y ^ (potencia). Devuelve float. Errores -> ValueError: expresión vacía, token desconocido, pila insuficiente, sobran operandos al final. La división por cero lanza ZeroDivisionError. No uses eval/exec.",
+  "hidden_tests": {
+    "test_hidden_rpn.py": "import pytest\nfrom rpn import eval_rpn\n\n\n@pytest.mark.parametrize(\"expr,val\", [(\"3 4 +\", 7.0), (\"5 1 2 + 4 * + 3 -\", 14.0),\n                                      (\"2 3 ^\", 8.0), (\"-3 2 *\", -6.0), (\"7 2 /\", 3.5),\n                                      (\"1.5 2 *\", 3.0), (\"42\", 42.0)])\ndef test_validas(expr, val):\n    assert eval_rpn(expr) == pytest.approx(val)\n    assert isinstance(eval_rpn(expr), float)\n\n\n@pytest.mark.parametrize(\"bad\", [\"\", \"+\", \"1 +\", \"1 2\", \"1 2 x\", \"1 2 % \"])\ndef test_invalidas(bad):\n    with pytest.raises(ValueError):\n        eval_rpn(bad)\n\n\ndef test_division_por_cero():\n    with pytest.raises(ZeroDivisionError):\n        eval_rpn(\"1 0 /\")\n\n\ndef test_no_usa_eval():\n    import inspect, rpn\n    src = inspect.getsource(rpn)\n    assert \"eval(\" not in src.replace(\"eval_rpn(\", \"\")\n"
+  },
+  "reference": {
+    "rpn.py": "import operator\n\n_OPS = {\"+\": operator.add, \"-\": operator.sub, \"*\": operator.mul,\n        \"/\": operator.truediv, \"^\": operator.pow}\n\n\ndef eval_rpn(expr):\n    tokens = expr.split()\n    if not tokens:\n        raise ValueError(\"vacia\")\n    stack = []\n    for t in tokens:\n        if t in _OPS:\n            if len(stack) < 2:\n                raise ValueError(\"pila insuficiente\")\n            b, a = stack.pop(), stack.pop()\n            stack.append(float(_OPS[t](a, b)))\n        else:\n            try:\n                stack.append(float(t))\n            except ValueError:\n                raise ValueError(f\"token desconocido: {t}\") from None\n    if len(stack) != 1:\n        raise ValueError(\"sobran operandos\")\n    return stack[0]\n"
+  }
+}

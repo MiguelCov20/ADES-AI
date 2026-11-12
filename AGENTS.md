@@ -29,6 +29,11 @@ Ecosistema de desarrollo autónomo multi-agente. Combina 3 "cerebros" (nube, GPU
 - Local (GPU 16GB): `gpt-oss:20b` (código), `Qwen3.8 27B` (razonamiento), `Llama-3.2-3B` (router), `nomic-embed-text` (embeddings).
 
 ## Comandos útiles
-- `docker compose up -d` — levanta Neo4j + Qdrant + Redis.
-- `start_ecosystem.bat` — arranque rápido (Windows).
-- `python agents/orquestador.py` — prueba del nodo PM (LangGraph).
+- `ades start` / `ades status` — levanta Docker (memoria, caché, Bifrost, Langfuse) y muestra el estado.
+- `ades run "requerimiento" --project P` — fábrica completa (Dev⇄QA con sandbox Docker).
+- `python -m pytest -m "not live" -q` (unitarios) · `python -m pytest -q` (todo, con servicios reales).
+- `python -m kpis.<kpi_tokens|kpi_loop|kpi_halluc|kpi_scale>` — mediciones de KPIs.
+
+## Reglas de código
+- Toda llamada LLM pasa por `core.llm_gateway.chat` (fallback, presupuesto, caché, Langfuse). No uses `get_llm` directo.
+- Todo código generado se ejecuta con `core.sandbox` (Docker, `--network none`).

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ades-dashboard",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "dashboard.app"],
+      "port": 8765
+    }
+  ]
+}

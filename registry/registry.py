@@ -73,9 +73,9 @@ def add_tool(url: str, tipo: str = "tool", nombre: str | None = None,
     catalog["herramientas"].append(tool)
     save_catalog(catalog)
 
-    # registrar también en el estado (inactiva)
+    # registrar también en el estado (inactiva y sin verificar: cuarentena #25)
     state = load_state()
-    state["herramientas"][tool_id] = {"activa": False, "integrada": False}
+    state["herramientas"][tool_id] = {"activa": False, "integrada": False, "estado": "sin_verificar"}
     save_state(state)
     return tool
 

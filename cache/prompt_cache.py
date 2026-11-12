@@ -11,14 +11,13 @@ from langchain_core.messages import HumanMessage, SystemMessage
 def build_messages(system: str, context: str, user_input: str) -> list:
     """Construye mensajes con el contenido estático primero (cacheable).
 
-    Orden: [SystemMessage(system), SystemMessage(context)?, HumanMessage(user_input)].
-    El prefijo (system + context) es estático y el proveedor lo cachea.
+    Orden: [SystemMessage(system + contexto), HumanMessage(user_input)].
+    Un ÚNICO mensaje de sistema: algunas plantillas (p. ej. Qwen3.8 en Ollama) rechazan
+    más de uno ("System message must be at the beginning"). El prefijo sigue siendo
+    estático, así que el proveedor lo cachea igual.
     """
-    messages = [SystemMessage(content=system)]
-    if context:
-        messages.append(SystemMessage(content=context))
-    messages.append(HumanMessage(content=user_input))
-    return messages
+    sys_text = f"{system}\n\n{context}" if context else system
+    return [SystemMessage(content=sys_text), HumanMessage(content=user_input)]
 
 
 def static_prefix(system: str, context: str) -> str:

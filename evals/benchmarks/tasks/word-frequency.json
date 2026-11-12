@@ -1,0 +1,12 @@
+{
+  "id": "word-frequency",
+  "title": "Top-K de palabras",
+  "difficulty": "facil",
+  "prompt": "Crea el archivo `wordfreq.py` con `top_words(text: str, k: int) -> list[tuple[str, int]]` que devuelve las k palabras más frecuentes en minúsculas con su conteo, ordenadas por conteo descendente y, en empate, alfabéticamente. Una palabra es una secuencia de letras (incluidas tildes y ñ) o dígitos; el resto de caracteres separa palabras. k <= 0 -> ValueError. Si hay menos de k palabras distintas, devuelve todas.",
+  "hidden_tests": {
+    "test_hidden_wordfreq.py": "import pytest\nfrom wordfreq import top_words\n\n\ndef test_basico():\n    assert top_words(\"a b a c b a\", 2) == [(\"a\", 3), (\"b\", 2)]\n\n\ndef test_empates_alfabeticos_y_mayusculas():\n    assert top_words(\"Perro gato PERRO árbol Gato\", 3) == [(\"gato\", 2), (\"perro\", 2), (\"árbol\", 1)]\n\n\ndef test_puntuacion():\n    assert top_words(\"hola, hola! ¿qué tal? tal-vez\", 2) == [(\"hola\", 2), (\"tal\", 2)]\n\n\ndef test_menos_palabras_que_k():\n    assert top_words(\"uno dos\", 10) == [(\"dos\", 1), (\"uno\", 1)]\n\n\ndef test_vacio():\n    assert top_words(\"\", 3) == []\n\n\ndef test_k_invalido():\n    with pytest.raises(ValueError):\n        top_words(\"a\", 0)\n"
+  },
+  "reference": {
+    "wordfreq.py": "import re\nfrom collections import Counter\n\n\ndef top_words(text, k):\n    if k <= 0:\n        raise ValueError(\"k > 0\")\n    words = re.findall(r\"[^\\W_]+\", text.lower())\n    c = Counter(words)\n    return sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))[:k]\n"
+  }
+}

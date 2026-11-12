@@ -25,3 +25,10 @@ transformers<5.0,>=4.26
 
 # Fase 8 - Evaluación y observabilidad (trazabilidad + juez)
 langfuse==5.2.0
+
+# v1.1 - Integración (dashboard web, CLI, tests, MCP, gateway)
+fastapi
+uvicorn
+PyYAML
+mcp
+pytest

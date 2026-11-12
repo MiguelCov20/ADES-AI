@@ -19,3 +19,10 @@ Thumbs.db
 
 # Dependencias vendor (herramientas clonadas: Obra Superpowers, oh-my-opencode)
 .opencode/vendor/
+
+# Estado de runtime de ADES-AI (métricas, backlog, presupuestos, cuarentena)
+.ades/
+workspace/
+registry/tools/
+registry/quarantine/
+.pytest_cache/

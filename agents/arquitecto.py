@@ -1,28 +1,30 @@
-"""Nodo Arquitecto (Gemini) - ADES-AI, Fase 3.
+"""Nodo Arquitecto (Gemini) - ADES-AI.
 
-PRD -> diseño de sistema y stack.
+PRD -> diseño de sistema. Usa la memoria cross-proyecto (#6) y registra la
+decisión en el timeline (#9).
 """
-from langchain_core.messages import HumanMessage, SystemMessage
-
-from agents.llm import get_llm
+from agents.common import call_agent, memory_context
+from agents.prompts import get_prompt
 
 
 def arquitecto_node(state: dict) -> dict:
     prd = state.get("prd", "")
     requerimiento = state.get("requerimiento", "")
-    llm = get_llm("gemini", "auto")
-    system = (
-        "Eres el Arquitecto de ADES-AI. Recibes el PRD del Project Manager y "
-        "debes disenar la solucion: componentes, stack tecnologico, estructura de "
-        "archivos y API. Responde de forma clara y accionable para el Developer."
-    )
-    resp = llm.invoke([
-        SystemMessage(content=system),
-        HumanMessage(content=f"Requerimiento: {requerimiento}\n\nPRD:\n{prd}"),
-    ])
-    return {"arquitectura": resp.content}
-
-
-if __name__ == "__main__":
-    r = arquitecto_node({"requerimiento": "endpoint ping", "prd": "crear endpoint /ping"})
-    print(r["arquitectura"])
+    project = state.get("project")
+    ctx = memory_context(requerimiento, project)
+    if state.get("repomap"):
+        ctx = (ctx + "\n\nMapa del repositorio actual:\n" + state["repomap"]).strip()
+    res = call_agent("arquitecto", get_prompt("arquitecto"),
+                     f"Requerimiento: {requerimiento}\n\nPRD:\n{prd}", state, context=ctx,
+                     fallback=("gemini", "auto"))
+    def _record():
+        try:
+            from memory import timeline
+            timeline.record_decision(f"Arquitectura: {requerimiento[:80]}", res.text[:1500],
+                                     project=project)
+        except Exception:
+            pass
+    # Graphiti tarda ~60 s por episodio: se registra en segundo plano (no bloquea la fábrica)
+    import threading
+    threading.Thread(target=_record, daemon=True, name="timeline-record").start()
+    return {"arquitectura": res.text}

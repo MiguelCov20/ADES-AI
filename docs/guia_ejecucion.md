@@ -1,4 +1,4 @@
-# Guía de ejecución — ADES-AI v1.0
+# Guía de ejecución — ADES-AI v1.1
 
 Guía paso a paso para levantar y usar el ecosistema completo. Complementa a
 `docs/plan_ecosistema_ia.md` (el plan/fuente de verdad) y a `AGENTS.md` (reglas).
@@ -55,7 +55,21 @@ Levanta:
 - **Redis** (caché) → `:6379`
 - **Bifrost** (gateway) → `http://localhost:8080`
 
-(Opcional, observabilidad) `docker compose -f docker-compose.langfuse.yml up -d`.
+Observabilidad (necesaria para medir el KPI 1):
+`docker compose -f docker-compose.langfuse.yml up -d` → Langfuse v4 en `http://localhost:3000`
+(Postgres + ClickHouse + Redis + MinIO; el proyecto y las API keys se crean solos con las
+variables `LANGFUSE_INIT_*` de `.env`).
+
+Todo de una vez: `ades start` (o `ades.bat start`).
+
+### 2.3.1 Gateway Bifrost (auth/scope)
+Con `ADES_GATEWAY=bifrost` en `.env`, todas las llamadas LLM pasan por Bifrost
+(`mcp_servers/gateway/bifrost.config.json`). Dos virtual keys: `BIFROST_VK_FACTORY`
+(todos los proveedores) y `BIFROST_VK_LOCAL` (solo modelos Ollama).
+
+### 2.3.2 Sandbox de QA
+`docker build -t ades-sandbox:py311 environment/sandbox` (se construye solo la primera vez
+que QA lo necesita). Los tests corren con `--network none`, sin privilegios.
 
 ### 2.4 Modelos locales (Ollama)
 
@@ -65,6 +79,13 @@ powershell -ExecutionPolicy Bypass -File environment/setup_ollama.ps1
 
 Descarga: `gpt-oss:20b`, `qwen3.8:27b-iq3` (importa GGUF local), `llama3.2:3b`,
 `nomic-embed-text`.
+
+Después crea las variantes con contexto fijo (obligatorio si usas Bifrost: el servidor
+Ollama usa 65536 de contexto por defecto y por el gateway no se puede enviar `num_ctx`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File environment/setup_ollama_ctx.ps1
+```
 
 ### 2.5 Skills externas (opcional)
 
@@ -136,6 +157,34 @@ npx promptfoo eval -c evals/promptfooconfig.yaml   # red-team
 
 ---
 
+### 3.7 CLI unificado y panel
+
+```powershell
+ades status                      # servicios, GPU, presupuesto por proyecto
+ades run "requerimiento" --project demo-api
+ades bootstrap "tienda" --descripcion "API de productos"   # crea proyecto + backlog
+ades backlog work --project tienda --background            # agota tickets en background
+ades budget set --project tienda --usd 2
+ades tokens                      # tokens, costo y hit-rate
+ades dashboard                   # http://127.0.0.1:8765 (se refresca solo)
+ades tools scan <id> / approve <id> / integrate <id>       # registry con cuarentena
+ades memory remember "prefiero FastAPI"  /  ades memory why "por qué Qdrant"
+ades watchdog --project tienda   ·  ades bench  ·  ades council  ·  ades audit
+```
+
+### 3.8 Tests y KPIs
+
+```powershell
+python -m pytest -m "not live" -q      # unitarios (rápidos, sin servicios)
+python -m pytest -q                    # todo, incluidos los live (Docker, Ollama, nube)
+python -m kpis.kpi_tokens              # KPI 1: ahorro de tokens leído de Langfuse
+python -m kpis.kpi_loop                # KPI 2 y 3: costo $0 y bucle Dev⇄QA
+python -m kpis.kpi_halluc              # KPI 4: anti-alucinación
+python -m kpis.kpi_scale               # KPI 5: concurrencia (sin vLLM en Windows+AMD)
+```
+
+Los resultados se guardan en `.ades/_global/kpis/`.
+
 ## 4. Referencia rápida
 
 | Qué | Comando |
@@ -162,3 +211,7 @@ npx promptfoo eval -c evals/promptfooconfig.yaml   # red-team
 | cognee-mcp no conecta | `cognee-cli serve` conecta a Cloud, no al MCP local | usa Docker: `docker run -d ... cognee/cognee-mcp:main` |
 | Skills de oh-my-opencode desaparecen | `.opencode/vendor/` está gitignored | re-ejecuta `environment/setup_fase4.ps1` |
 | Error de codificación al imprimir | consola Windows cp1252 | los módulos ya reconfiguren stdout a UTF-8 |
+| La fábrica se queda esperando a Gemini | el cliente de Google no siempre respeta su timeout | ya hay timeout duro (`ADES_LLM_TIMEOUT`, 120 s) + fallback en cascada + circuit breaker |
+| `429 OpenCode Go usage limit reached` | cuota del plan OpenCode Go agotada | la cascada cae a Gemini/local; espera al reinicio de la cuota |
+| VRAM llena con llama3.2:3b (10 GB) | contexto 65536 por defecto del servidor Ollama | usa las variantes `-ctx16k` (`setup_ollama_ctx.ps1`) |
+| `activate` del registry se niega | la herramienta no está aprobada o compite con otra | `ades tools scan <id>` → `ades tools approve <id>`; ver `ades tools conflicts <id>` |

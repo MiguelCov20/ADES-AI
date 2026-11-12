@@ -1,0 +1,12 @@
+{
+  "id": "roman-numerals",
+  "title": "Conversión de números romanos",
+  "difficulty": "facil",
+  "prompt": "Crea el archivo `roman.py` con dos funciones:\n- `to_roman(n: int) -> str`: convierte un entero 1..3999 a número romano en forma canónica (p. ej. 4 -> 'IV', 1994 -> 'MCMXCIV'). Si n está fuera de rango o no es int, lanza ValueError.\n- `from_roman(s: str) -> int`: operación inversa. Si la cadena no es un número romano canónico válido (p. ej. 'IIII', 'VX', '', 'ABC'), lanza ValueError.",
+  "hidden_tests": {
+    "test_hidden_roman.py": "import pytest\nfrom roman import to_roman, from_roman\n\n\n@pytest.mark.parametrize(\"n,s\", [(1, \"I\"), (4, \"IV\"), (9, \"IX\"), (14, \"XIV\"), (40, \"XL\"),\n                                 (90, \"XC\"), (400, \"CD\"), (1994, \"MCMXCIV\"), (3999, \"MMMCMXCIX\")])\ndef test_ida_y_vuelta(n, s):\n    assert to_roman(n) == s\n    assert from_roman(s) == n\n\n\ndef test_todo_el_rango():\n    for n in range(1, 4000):\n        assert from_roman(to_roman(n)) == n\n\n\n@pytest.mark.parametrize(\"bad\", [0, -1, 4000])\ndef test_fuera_de_rango(bad):\n    with pytest.raises(ValueError):\n        to_roman(bad)\n\n\n@pytest.mark.parametrize(\"bad\", [\"\", \"IIII\", \"VX\", \"ABC\", \"MMMM\", \"IC\"])\ndef test_romanos_invalidos(bad):\n    with pytest.raises(ValueError):\n        from_roman(bad)\n"
+  },
+  "reference": {
+    "roman.py": "_PAIRS = [(1000, \"M\"), (900, \"CM\"), (500, \"D\"), (400, \"CD\"), (100, \"C\"), (90, \"XC\"),\n          (50, \"L\"), (40, \"XL\"), (10, \"X\"), (9, \"IX\"), (5, \"V\"), (4, \"IV\"), (1, \"I\")]\n\n\ndef to_roman(n):\n    if not isinstance(n, int) or isinstance(n, bool) or not 1 <= n <= 3999:\n        raise ValueError(\"fuera de rango\")\n    out = []\n    for v, s in _PAIRS:\n        while n >= v:\n            out.append(s)\n            n -= v\n    return \"\".join(out)\n\n\n_TABLE = {to_roman(i): i for i in range(1, 4000)}\n\n\ndef from_roman(s):\n    if not isinstance(s, str) or s not in _TABLE:\n        raise ValueError(\"romano invalido\")\n    return _TABLE[s]\n"
+  }
+}

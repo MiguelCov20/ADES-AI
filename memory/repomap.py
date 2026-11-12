@@ -27,20 +27,30 @@ def _driver():
     )
 
 
-def generate_repomap(driver=None) -> str:
-    """Genera el RepoMap (texto condensado) a partir del grafo de código."""
+def generate_repomap(driver=None, repo: str | None = None) -> str:
+    """Genera el RepoMap (texto condensado) a partir del grafo de código.
+
+    `repo`: ruta absoluta del repo (propiedad `repo` de CodeFile) para limitar el
+    mapa a un proyecto (multi-proyecto); None = todo el grafo.
+    """
     d = driver or _driver()
+    if repo:
+        from pathlib import Path
+        repo = str(Path(repo).resolve())
+    fw = "WHERE f.repo = $repo " if repo else ""
     with d.session() as s:
         files = s.run(
-            "MATCH (f:CodeFile) RETURN f.path AS path ORDER BY f.path"
+            f"MATCH (f:CodeFile) {fw}RETURN f.path AS path ORDER BY f.path", repo=repo
         ).data()
         classes = s.run(
-            "MATCH (c:Class) RETURN c.name AS name, c.path AS path, c.docstring AS doc "
-            "ORDER BY c.path"
+            f"MATCH (f:CodeFile)-[:CONTAINS]->(c:Class) {fw}"
+            "RETURN c.name AS name, c.path AS path, c.docstring AS doc ORDER BY c.path",
+            repo=repo,
         ).data()
         funcs = s.run(
-            "MATCH (fn:Function) RETURN fn.name AS name, fn.path AS path, fn.kind AS kind, "
-            "fn.params AS params ORDER BY fn.path"
+            f"MATCH (f:CodeFile)-[:CONTAINS*1..2]->(fn:Function) {fw}"
+            "RETURN DISTINCT fn.name AS name, fn.path AS path, fn.kind AS kind, "
+            "fn.params AS params ORDER BY fn.path", repo=repo,
         ).data()
 
     by_file: dict[str, dict] = {}
@@ -55,7 +65,10 @@ def generate_repomap(driver=None) -> str:
 
     lines = []
     for path, data in sorted(by_file.items()):
-        rel = path.split("ADES-AI")[-1].lstrip("\\/") if "ADES-AI" in path else path
+        if repo and path.startswith(repo):
+            rel = path[len(repo):].lstrip("\\/")
+        else:
+            rel = path.split("ADES-AI")[-1].lstrip("\\/") if "ADES-AI" in path else path
         lines.append(rel)
         for cls in data["classes"]:
             lines.append(f"  class {cls}")
@@ -66,7 +79,7 @@ def generate_repomap(driver=None) -> str:
 
 def measure_savings(repo_path: str | None = None) -> dict:
     """Compara el tamaño del RepoMap con el código completo (ahorro)."""
-    repomap = generate_repomap()
+    repomap = generate_repomap(repo=repo_path)
     repomap_chars = len(repomap)
 
     full_chars = 0
@@ -74,7 +87,8 @@ def measure_savings(repo_path: str | None = None) -> dict:
         from pathlib import Path
         root = Path(repo_path)
         for f in root.rglob("*.py"):
-            if any(p in {"__pycache__", ".git", ".venv", "venv", "site-packages"} for p in f.parts):
+            if any(p in {"__pycache__", ".git", ".venv", "venv", "site-packages", ".opencode",
+                         "node_modules", ".ades", "workspace"} for p in f.relative_to(root).parts):
                 continue
             full_chars += len(f.read_bytes())
 

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://www.getbifrost.ai/schema",
+  "source_of_truth": "config.json",
+  "client": {
+    "drop_excess_requests": false,
+    "enable_logging": true,
+    "disable_content_logging": true
+  },
+  "providers": {
+    "ollama": {
+      "keys": [
+        {
+          "name": "ollama-local",
+          "value": "",
+          "models": [
+            "*"
+          ],
+          "weight": 1.0,
+          "ollama_key_config": {
+            "url": "http://host.docker.internal:11434"
+          }
+        }
+      ],
+      "network_config": {
+        "base_url": "http://host.docker.internal:11434",
+        "default_request_timeout_in_seconds": 600,
+        "allow_private_network": true
+      },
+      "concurrency_and_buffer_size": {
+        "concurrency": 4,
+        "buffer_size": 128
+      }
+    },
+    "gemini": {
+      "keys": [
+        {
+          "name": "gemini",
+          "value": "env.GOOGLE_API_KEY",
+          "models": [
+            "*"
+          ],
+          "weight": 1.0
+        }
+      ],
+      "network_config": {
+        "default_request_timeout_in_seconds": 120
+      },
+      "concurrency_and_buffer_size": {
+        "concurrency": 8,
+        "buffer_size": 64
+      }
+    },
+    "opencode-go": {
+      "keys": [
+        {
+          "name": "opencode-go",
+          "value": "env.OPENCODE_API_KEY",
+          "models": [
+            "*"
+          ],
+          "weight": 1.0
+        }
+      ],
+      "network_config": {
+        "default_request_timeout_in_seconds": 120,
+        "extra_headers": {
+          "x-opencode-session": "ades-bifrost-gateway",
+          "User-Agent": "ades-ai/1.0"
+        }
+      },
+      "concurrency_and_buffer_size": {
+        "concurrency": 8,
+        "buffer_size": 64
+      }
+    }
+  },
+  "governance": {
+    "virtual_keys": [
+      {
+        "id": "vk-ades-factory",
+        "name": "ades-factory",
+        "description": "Fabrica ADES-AI: todos los proveedores",
+        "value": "env.BIFROST_VK_FACTORY",
+        "is_active": true,
+        "allow_all_providers": true
+      },
+      {
+        "id": "vk-ades-local",
+        "name": "ades-local",
+        "description": "Solo modelos locales (Ollama, $0)",
+        "value": "env.BIFROST_VK_LOCAL",
+        "is_active": true,
+        "provider_configs": [
+          {
+            "provider": "ollama",
+            "allowed_models": [
+              "gpt-oss:20b",
+              "gpt-oss:20b-ctx16k",
+              "llama3.2:3b",
+              "llama3.2:3b-ctx16k",
+              "nomic-embed-text",
+              "nomic-embed-text:latest",
+              "qwen3.8:27b-iq3",
+              "qwen3.8:27b-iq3-ctx16k"
+            ],
+            "key_ids": [
+              "*"
+            ],
+            "weight": 1.0
+          }
+        ]
+      }
+    ]
+  }
+}

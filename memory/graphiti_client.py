@@ -17,6 +17,7 @@ import argparse
 import asyncio
 import datetime as dt
 import os
+import re
 import sys
 
 from dotenv import load_dotenv
@@ -68,25 +69,41 @@ OPENCODE_BASE = "https://opencode.ai/inference/go/openai/v1"
 OLLAMA_BASE = "http://localhost:11434/v1"
 
 
-def build_graphiti() -> Graphiti:
-    """Construye una instancia de Graphiti apuntando a OpenCode Go + Ollama + Neo4j."""
-    opencode_key = os.getenv("OPENCODE_API_KEY", "")
+GEMINI_OPENAI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
-    # LLM (extracción de entidades/relaciones) -> OpenCode Go (DeepSeek V4)
-    llm_client = AsyncOpenAI(
-        base_url=OPENCODE_BASE,
-        api_key=opencode_key,
-        default_headers={"x-opencode-session": "ades-graphiti", "User-Agent": "ades-ai/1.0"},
-    )
-    llm = OpenAIClient(
-        config=LLMConfig(
-            api_key=opencode_key,
-            model=os.getenv("GRAPHITI_MODEL", "deepseek-v4-pro"),
-            small_model=os.getenv("GRAPHITI_SMALL_MODEL", "deepseek-v4.1-flash"),
-            base_url=OPENCODE_BASE,
-        ),
-        client=llm_client,
-    )
+
+def _llm_backend() -> tuple[str, str, dict, str, str]:
+    """(base_url, api_key, headers, modelo, modelo_pequeño) según GRAPHITI_PROVIDER.
+
+    Por defecto `ollama` (gpt-oss:20b local, $0, sin cuotas). Antes era siempre
+    OpenCode Go: al agotarse la cuota del plan, el timeline de decisiones dejaba de
+    escribir en Graphiti (RateLimitError en los tests live).
+    """
+    prov = os.getenv("GRAPHITI_PROVIDER", "ollama").lower()
+    if prov == "opencode":
+        return (OPENCODE_BASE, os.getenv("OPENCODE_API_KEY", ""),
+                {"x-opencode-session": "ades-graphiti", "User-Agent": "ades-ai/1.0"},
+                os.getenv("GRAPHITI_MODEL", "deepseek-v4-pro"),
+                os.getenv("GRAPHITI_SMALL_MODEL", "deepseek-v4.1-flash"))
+    if prov == "gemini":
+        return (GEMINI_OPENAI_BASE, os.getenv("GOOGLE_API_KEY", ""), {},
+                os.getenv("GRAPHITI_MODEL", "gemini-flash-lite-latest"),
+                os.getenv("GRAPHITI_SMALL_MODEL", "gemini-flash-lite-latest"))
+    model = os.getenv("GRAPHITI_MODEL", "gpt-oss:20b-ctx16k")
+    return (OLLAMA_BASE, "ollama", {}, model, os.getenv("GRAPHITI_SMALL_MODEL", model))
+
+
+def build_graphiti() -> Graphiti:
+    """Construye Graphiti: LLM configurable (GRAPHITI_PROVIDER) + nomic local + Neo4j."""
+    base, key, headers, model, small = _llm_backend()
+    llm_client = AsyncOpenAI(base_url=base, api_key=key, default_headers=headers or None)
+    cfg = LLMConfig(api_key=key, model=model, small_model=small, base_url=base)
+    if base == OLLAMA_BASE:
+        # Modelos locales: cliente genérico (salida JSON) en vez de structured outputs
+        from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
+        llm = OpenAIGenericClient(config=cfg, client=llm_client)
+    else:
+        llm = OpenAIClient(config=cfg, client=llm_client)
 
     # Embeddings -> nomic-embed-text (local, Ollama)
     embedder_client = AsyncOpenAI(base_url=OLLAMA_BASE, api_key="ollama")
@@ -99,9 +116,9 @@ def build_graphiti() -> Graphiti:
         client=embedder_client,
     )
 
-    # Cross-encoder / reranker (usado en search avanzado) -> OpenCode Go
+    # Cross-encoder / reranker (usado en search avanzado) -> mismo backend
     reranker = OpenAIRerankerClient(
-        config=LLMConfig(api_key=opencode_key, model="deepseek-v4-pro", base_url=OPENCODE_BASE),
+        config=LLMConfig(api_key=key, model=small, base_url=base),
         client=llm_client,
     )
 
@@ -115,43 +132,104 @@ def build_graphiti() -> Graphiti:
     )
 
 
-async def _add(g: Graphiti, text: str, name: str, source: str) -> dict:
+def _utc(when: "dt.datetime | float | None") -> dt.datetime:
+    """Normaliza un instante (datetime, epoch o None=ahora) a datetime UTC con zona."""
+    if when is None:
+        return dt.datetime.now(dt.timezone.utc)
+    if isinstance(when, (int, float)):
+        return dt.datetime.fromtimestamp(float(when), dt.timezone.utc)
+    if when.tzinfo is None:
+        return when.replace(tzinfo=dt.timezone.utc)
+    return when
+
+
+def safe_group_id(name: str) -> str:
+    """Convierte un nombre de proyecto en un group_id válido para Graphiti
+    (solo letras, dígitos, '-' y '_')."""
+    g = re.sub(r"[^A-Za-z0-9_-]+", "-", name or "").strip("-")
+    return g or "default"
+
+
+async def _add(g: Graphiti, text: str, name: str, source: str,
+               reference_time: dt.datetime | None = None,
+               group_id: str | None = None) -> dict:
     await g.build_indices_and_constraints()
-    result = await g.add_episode(
-        name=name,
-        episode_body=text,
-        source_description=source,
-        reference_time=dt.datetime.now(dt.timezone.utc),
-    )
+    kwargs = {}
+    if group_id:
+        kwargs["group_id"] = group_id
+    try:
+        result = await g.add_episode(
+            name=name,
+            episode_body=text,
+            source_description=source,
+            reference_time=_utc(reference_time),
+            **kwargs,
+        )
+    finally:
+        await g.close()
     return {
         "nodes": len(result.nodes),
         "edges": len(result.edges),
+        "episode": getattr(getattr(result, "episode", None), "uuid", None),
     }
 
 
-def add_text(text: str, name: str = "episodio", source: str = "usuario") -> dict:
-    """Ingiere un texto en el grafo temporal (síncrono)."""
+def add_text(text: str, name: str = "episodio", source: str = "usuario",
+             reference_time: "dt.datetime | float | None" = None,
+             group_id: str | None = None) -> dict:
+    """Ingiere un texto en el grafo temporal (síncrono).
+
+    `reference_time` (datetime o epoch) es el momento real del episodio; por
+    defecto, ahora. `group_id` aísla los episodios (p.ej. por proyecto).
+    """
     g = build_graphiti()
-    return asyncio.run(_add(g, text, name, source))
+    return asyncio.run(_add(g, text, name, source, reference_time, group_id))
 
 
-async def _search(g: Graphiti, query: str, num: int) -> list[dict]:
+def _iso(v) -> str | None:
+    return v.isoformat() if isinstance(v, dt.datetime) else (str(v) if v else None)
+
+
+async def _search(g: Graphiti, query: str, num: int,
+                  group_ids: list[str] | None = None) -> list[dict]:
     await g.build_indices_and_constraints()
-    edges = await g.search(query, num_results=num)
+    try:
+        edges = await g.search(query, num_results=num, group_ids=group_ids)
+    finally:
+        await g.close()
     out = []
     for e in edges:
         out.append({
             "source": e.source_node_uuid,
             "target": e.target_node_uuid,
             "fact": getattr(e, "fact", None) or (getattr(e, "name", None)),
+            "valid_at": _iso(getattr(e, "valid_at", None)),
+            "invalid_at": _iso(getattr(e, "invalid_at", None)),
+            "created_at": _iso(getattr(e, "created_at", None)),
+            "group_id": getattr(e, "group_id", None),
         })
     return out
 
 
-def search(query: str, num: int = 10) -> list[dict]:
-    """Busca en el grafo temporal (síncrono)."""
+def search(query: str, num: int = 10, group_ids: list[str] | None = None) -> list[dict]:
+    """Busca en el grafo temporal (síncrono). `group_ids` filtra por grupos."""
     g = build_graphiti()
-    return asyncio.run(_search(g, query, num))
+    return asyncio.run(_search(g, query, num, group_ids))
+
+
+async def _clear(g: Graphiti, group_ids: list[str]) -> None:
+    from graphiti_core.utils.maintenance.graph_data_operations import clear_data
+    try:
+        await clear_data(g.driver, group_ids=group_ids)
+    finally:
+        await g.close()
+
+
+def clear_group(group_id: str) -> None:
+    """Borra todos los nodos/aristas/episodios de un group_id (útil en tests)."""
+    if not group_id:
+        raise ValueError("group_id vacío: no se borra el grafo entero")
+    asyncio.run(_clear(build_graphiti(), [group_id]))
 
 
 def main(argv: list[str]) -> int:

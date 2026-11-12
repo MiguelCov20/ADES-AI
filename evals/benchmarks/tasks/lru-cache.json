@@ -1,0 +1,12 @@
+{
+  "id": "lru-cache",
+  "title": "Caché LRU",
+  "difficulty": "media",
+  "prompt": "Crea el archivo `lru.py` con la clase `LRUCache(capacity: int)` (capacity >= 1, si no lanza ValueError) con los métodos:\n- `get(key)`: devuelve el valor o None si no existe; marca la clave como usada.\n- `put(key, value)`: inserta/actualiza; si se supera la capacidad, expulsa la clave menos recientemente usada.\n- `__len__()` y `__contains__(key)` (este último NO cuenta como uso).\nNo uses functools.lru_cache.",
+  "hidden_tests": {
+    "test_hidden_lru.py": "import pytest\nfrom lru import LRUCache\n\n\ndef test_capacidad_invalida():\n    with pytest.raises(ValueError):\n        LRUCache(0)\n\n\ndef test_expulsion_lru():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert c.get(\"a\") == 1\n    c.put(\"c\", 3)  # expulsa b\n    assert \"b\" not in c\n    assert c.get(\"b\") is None\n    assert c.get(\"a\") == 1 and c.get(\"c\") == 3\n    assert len(c) == 2\n\n\ndef test_actualizar_no_crece():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"a\", 10)\n    assert len(c) == 1 and c.get(\"a\") == 10\n\n\ndef test_actualizar_refresca():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    c.put(\"a\", 3)\n    c.put(\"c\", 4)  # expulsa b\n    assert \"b\" not in c and c.get(\"a\") == 3\n\n\ndef test_contains_no_cuenta_como_uso():\n    c = LRUCache(2)\n    c.put(\"a\", 1)\n    c.put(\"b\", 2)\n    assert \"a\" in c\n    c.put(\"c\", 3)  # a sigue siendo la menos usada\n    assert \"a\" not in c and \"b\" in c\n"
+  },
+  "reference": {
+    "lru.py": "from collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity):\n        if capacity < 1:\n            raise ValueError(\"capacity >= 1\")\n        self.capacity = capacity\n        self._d = OrderedDict()\n\n    def get(self, key):\n        if key not in self._d:\n            return None\n        self._d.move_to_end(key)\n        return self._d[key]\n\n    def put(self, key, value):\n        if key in self._d:\n            self._d.move_to_end(key)\n        self._d[key] = value\n        if len(self._d) > self.capacity:\n            self._d.popitem(last=False)\n\n    def __len__(self):\n        return len(self._d)\n\n    def __contains__(self, key):\n        return key in self._d\n"
+  }
+}

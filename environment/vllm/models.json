@@ -1,0 +1,21 @@
+{
+  "timeout": 180,
+  "backends": [
+    {
+      "name": "vllm-gpt-oss-20b",
+      "base_url": "http://vllm-gpt-oss-20b:8000/v1",
+      "models": [
+        "gpt-oss:20b"
+      ],
+      "max_concurrency": 8
+    },
+    {
+      "name": "vllm-llama3-2-3b",
+      "base_url": "http://vllm-llama3-2-3b:8000/v1",
+      "models": [
+        "llama3.2:3b"
+      ],
+      "max_concurrency": 16
+    }
+  ]
+}

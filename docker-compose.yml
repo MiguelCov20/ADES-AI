@@ -39,17 +39,28 @@ services:
     restart: unless-stopped
 
   # 4. Gateway de IA (Bifrost) — LLM + MCP + agent gateway (auth/scope/caché semántico)
+  #    Config: mcp_servers/gateway/bifrost.config.json (Ollama con concurrencia acotada
+  #    para no saturar la GPU, Gemini y OpenCode Go). API OpenAI-compatible en :8080/v1.
   gateway:
-    image: maximhq/bifrost
+    image: maximhq/bifrost:latest
     container_name: bifrost_gateway
     ports:
       - "8080:8080"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - OPENCODE_API_KEY=${OPENCODE_API_KEY:-}
+      - BIFROST_VK_FACTORY=${BIFROST_VK_FACTORY:-}
+      - BIFROST_VK_LOCAL=${BIFROST_VK_LOCAL:-}
+    volumes:
+      - ./mcp_servers/gateway/bifrost.config.json:/app/data/config.json:ro
+      - bifrost_data:/app/data
     restart: unless-stopped
 
   # (Espacio reservado para el contenedor de Agentes LangGraph)
   # (Espacio reservado para el servidor Ollama LLM Local con acceso a tu GPU de 16GB)
 
 volumes:
+  bifrost_data:
   neo4j_data:
   qdrant_data:
   redis_data:

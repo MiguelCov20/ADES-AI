@@ -1,0 +1,44 @@
+# Generado por automation/model_serving.py (rocm). NO verificado en ejecucion:
+# vLLM requiere Linux; la maquina de desarrollo (Windows + AMD) usa Ollama.
+# Uso (host Linux):  HF_TOKEN=... docker compose -f <este archivo> up -d
+# Router OpenAI-compatible en http://<host>:8080/v1
+services:
+  vllm-gpt-oss-20b:
+    image: rocm/vllm:latest
+    entrypoint: ["vllm", "serve"]
+    command: ["openai/gpt-oss-20b", "--served-model-name", "gpt-oss:20b", "--host", "0.0.0.0", "--port", "8000", "--gpu-memory-utilization", "0.7", "--max-model-len", "8192"]
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    ports: ["8001:8000"]
+    ipc: host
+    restart: unless-stopped
+    devices: ["/dev/kfd", "/dev/dri"]
+    group_add: ["video"]
+    security_opt: ["seccomp=unconfined"]
+  vllm-llama3-2-3b:
+    image: rocm/vllm:latest
+    entrypoint: ["vllm", "serve"]
+    command: ["meta-llama/Llama-3.2-3B-Instruct", "--served-model-name", "llama3.2:3b", "--host", "0.0.0.0", "--port", "8000", "--gpu-memory-utilization", "0.2", "--max-model-len", "8192"]
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    ports: ["8002:8000"]
+    ipc: host
+    restart: unless-stopped
+    devices: ["/dev/kfd", "/dev/dri"]
+    group_add: ["video"]
+    security_opt: ["seccomp=unconfined"]
+  router:
+    image: python:3.11-slim
+    command: ["python", "/app/model_serving.py", "serve", "--config", "/config/models.json", "--port", "8080"]
+    volumes:
+      - ../../automation/model_serving.py:/app/model_serving.py:ro
+      - ./models.json:/config/models.json:ro
+    ports: ["8080:8080"]
+    depends_on: [vllm-gpt-oss-20b, vllm-llama3-2-3b]
+    restart: unless-stopped
+volumes:
+  hf-cache: {}

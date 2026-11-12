@@ -149,12 +149,59 @@ def parse_file(path: Path) -> dict:
     tree = parser.parse(src)
     out: dict = {"path": str(path), "classes": [], "functions": [], "imports": []}
     _walk(tree.root_node, src, str(path), "", out)
+    out["top_names"] = _top_level_names(tree.root_node, src)
     return out
+
+
+def _top_level_names(root, src: bytes) -> list[str]:
+    """Nombres definidos a nivel de módulo (asignaciones, imports re-exportados)."""
+    names = set()
+    for child in root.children:
+        node = child
+        if node.type == "decorated_definition":
+            node = node.child_by_field_name("definition") or node
+        if node.type in ("class_definition", "function_definition"):
+            n = node.child_by_field_name("name")
+            if n is not None:
+                names.add(_text(n, src))
+        elif node.type == "expression_statement":
+            a = _named(node)
+            if a is not None and a.type == "assignment":
+                left = a.child_by_field_name("left")
+                if left is not None and left.type == "identifier":
+                    names.add(_text(left, src))
+        elif node.type in ("import_statement", "import_from_statement"):
+            for c in node.children:
+                if c.type == "dotted_name" and node.type == "import_statement":
+                    names.add(_text(c, src).split(".")[0])
+                elif c.type == "aliased_import":
+                    al = c.child_by_field_name("alias")
+                    if al is not None:
+                        names.add(_text(al, src))
+            if node.type == "import_from_statement":
+                mod = node.child_by_field_name("module_name")
+                for c in node.children:
+                    if c.type == "dotted_name" and c != mod:
+                        names.add(_text(c, src).split(".")[-1])
+    return sorted(names)
 
 
 # --- Escritura a Neo4j ------------------------------------------------------
 
-def _write(driver, parsed: dict) -> None:
+SKIP_DIRS = {"__pycache__", ".git", ".venv", "venv", "site-packages", "node_modules",
+             ".opencode", ".ades", "workspace", ".pytest_cache"}
+
+
+def module_name(path: Path, root: Path) -> str:
+    """Nombre de módulo dotted relativo al repo (agents/llm.py -> agents.llm)."""
+    rel = path.resolve().relative_to(root.resolve()).with_suffix("")
+    parts = list(rel.parts)
+    if parts and parts[-1] == "__init__":
+        parts = parts[:-1]
+    return ".".join(parts)
+
+
+def _write(driver, parsed: dict, repo: str = "", module: str = "") -> None:
     """Escribe un archivo analizado en Neo4j (idempotente vía MERGE)."""
     path = parsed["path"]
     language = "python" if path.endswith(".py") else "unknown"
@@ -162,8 +209,10 @@ def _write(driver, parsed: dict) -> None:
     with driver.session() as session:
         session.run(
             "MERGE (f:CodeFile {path: $path}) "
-            "SET f.name = $name, f.language = $language",
-            path=path, name=Path(path).name, language=language,
+            "SET f.name = $name, f.language = $language, f.repo = $repo, "
+            "f.module = $module, f.top_names = $top",
+            path=path, name=Path(path).name, language=language, repo=repo,
+            module=module, top=parsed.get("top_names", []),
         )
 
         for m in set(parsed["imports"]):
@@ -232,8 +281,7 @@ def index_repo(repo_path: str, driver, reset: bool = False, verbose: bool = Fals
 
     for f in files:
         # evitar __pycache__, venv, .git
-        if any(part in {"__pycache__", ".git", ".venv", "venv", "site-packages"}
-               for part in f.parts):
+        if any(part in SKIP_DIRS for part in f.relative_to(root).parts):
             continue
         try:
             parsed = parse_file(f)
@@ -241,7 +289,7 @@ def index_repo(repo_path: str, driver, reset: bool = False, verbose: bool = Fals
             if verbose:
                 print(f"  [skip] {f}: {e}")
             continue
-        _write(driver, parsed)
+        _write(driver, parsed, repo=str(root), module=module_name(f, root))
         counts["files"] += 1
         counts["classes"] += len(parsed["classes"])
         counts["functions"] += len(parsed["functions"])

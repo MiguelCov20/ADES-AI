@@ -9,7 +9,12 @@
       "url": "https://github.com/affaan-m/ECC",
       "descripcion": "Framework de skills, reglas, hooks y seguridad para agentes de codigo (274k estrellas)",
       "instalacion": "git clone",
-      "licencia": "consultar"
+      "licencia": "consultar",
+      "provee": [
+        "skills-framework",
+        "reglas-agente",
+        "hooks-agente"
+      ]
     },
     {
       "id": "llm-council",
@@ -18,7 +23,11 @@
       "url": "https://github.com/karpathy/llm-council",
       "descripcion": "Consejo multi-LLM: varios modelos se revisan entre si de forma anonima (LLM-as-judge)",
       "instalacion": "docker",
-      "licencia": "consultar"
+      "licencia": "consultar",
+      "provee": [
+        "llm-as-judge",
+        "consejo-multi-llm"
+      ]
     },
     {
       "id": "llmfit",
@@ -27,7 +36,11 @@
       "url": "https://github.com/AlexsJones/llmfit",
       "descripcion": "Detecta tu hardware y recomienda que modelos locales puedes correr (38k estrellas)",
       "instalacion": "git clone",
-      "licencia": "consultar"
+      "licencia": "consultar",
+      "provee": [
+        "recomendacion-modelos",
+        "deteccion-hardware"
+      ]
     },
     {
       "id": "web-llm",
@@ -36,7 +49,11 @@
       "url": "https://github.com/mlc-ai/web-llm",
       "descripcion": "Inferencia de LLMs en el navegador usando WebGPU (privada y sin servidor)",
       "instalacion": "npm",
-      "licencia": "consultar"
+      "licencia": "consultar",
+      "provee": [
+        "inferencia-navegador",
+        "webgpu"
+      ]
     }
   ]
 }
